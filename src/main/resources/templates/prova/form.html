@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 th:text="${isNova} ? 'Nova Prova' : 'Editar Prova'">Prova</h1>
+      <p>Selecione questões do banco, defina a ordem e pontuação.</p>
+    </div>
+    <div class="page-actions">
+      <a th:href="${isNova} ? '/provas' : '/provas/' + ${provaId}" class="btn btn-ghost">
+        <i class="fas fa-arrow-left"></i> Cancelar
+      </a>
+    </div>
+  </div>
+
+  <form th:action="${isNova} ? '/provas/nova' : '/provas/' + ${provaId} + '/editar'"
+        method="post" id="provaForm">
+
+    <div class="sidebar-layout">
+      <!-- Coluna principal -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Dados básicos -->
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Dados da Prova</span></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>Título da Prova *</label>
+                <input type="text" name="titulo" th:value="${form.titulo}" required
+                       placeholder="Ex: Avaliação Bimestral — Matemática 9º Ano"/>
+              </div>
+              <div class="form-group">
+                <label>Disciplina</label>
+                <input type="text" name="disciplina" th:value="${form.disciplina}"
+                       list="disciplinasList" placeholder="Ex: Matemática"/>
+                <datalist id="disciplinasList">
+                  <option th:each="d : ${disciplinas}" th:value="${d}"></option>
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label>Descrição / Instruções</label>
+                <input type="text" name="descricao" th:value="${form.descricao}"
+                       placeholder="Ex: Tempo: 50 min. Sem consulta."/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Questões selecionadas -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-list-check" style="color:var(--accent)"></i> Questões da Prova</span>
+            <span class="badge badge-neutral" id="countSelecionadas">0 questões</span>
+          </div>
+          <div class="card-body">
+            <div id="questoesSelecionadas" style="min-height:60px">
+              <div id="emptyMsg" class="text-muted" style="text-align:center;padding:20px;font-style:italic">
+                Selecione questões no painel ao lado →
+              </div>
+            </div>
+            <!-- Campos hidden para envio -->
+            <div id="hiddenFields"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar: picker de questões -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Ações</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+            <button type="submit" class="btn btn-primary" style="width:100%">
+              <i class="fas fa-save"></i>
+              <span th:text="${isNova} ? 'Criar Prova' : 'Salvar'"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-database"></i> Banco de Questões</span></div>
+          <div class="card-body" style="padding:12px">
+            <input type="text" id="buscaQuestao" placeholder="Filtrar questões..." onkeyup="filtrarQuestoes()"
+                   style="width:100%;padding:8px 12px;border:1.5px solid var(--line);border-radius:var(--radius);font-size:.875rem;margin-bottom:10px"/>
+            <div class="questoes-picker" id="questoesPicker">
+              <div th:each="q : ${questoes}"
+                   class="picker-item"
+                   th:id="'picker-' + ${q.id}"
+                   th:data-titulo="${q.titulo}"
+                   th:data-tipo="${q.tipo.name()}"
+                   th:data-disciplina="${q.disciplina}"
+                   th:onclick="'toggleQuestao(' + ${q.id} + ', \'' + ${q.titulo} + '\', \'' + ${q.tipo.descricao} + '\')'">
+                <input type="checkbox" class="picker-check" th:id="'chk-' + ${q.id}" onclick="event.stopPropagation()"/>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" th:text="${q.titulo}"></div>
+                  <div style="display:flex;gap:6px;margin-top:3px">
+                    <span th:class="'badge ' + (${q.tipo.name() == 'OBJETIVA'} ? 'badge-objetiva' : 'badge-discursiva')"
+                          th:text="${q.tipo.descricao}" style="font-size:.65rem"></span>
+                    <span th:if="${q.disciplina != null}" class="badge badge-neutral"
+                          th:text="${q.disciplina}" style="font-size:.65rem"></span>
+                  </div>
+                </div>
+              </div>
+              <div th:if="${#lists.isEmpty(questoes)}" class="text-muted" style="padding:20px;text-align:center;font-size:.85rem">
+                Nenhuma questão cadastrada.
+                <a th:href="@{/questoes/nova}">Criar questão</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+// Estado
+const questoesSelecionadas = new Map(); // id -> {titulo, tipo, pontos}
+let ordem = [];
+
+// Pré-carregar questões já na prova (modo edição)
+const questoesExistentes = /*[[${form.questoesIds}]]*/ [];
+const pontosExistentes = /*[[${form.pontos}]]*/ [];
+
+window.addEventListener('load', function() {
+  if (questoesExistentes && questoesExistentes.length > 0) {
+    questoesExistentes.forEach((id, i) => {
+      const pickerItem = document.getElementById('picker-' + id);
+      if (pickerItem) {
+        const titulo = pickerItem.dataset.titulo;
+        const tipo = pickerItem.dataset.tipo === 'OBJETIVA' ? 'Objetiva' : 'Discursiva';
+        const pts = pontosExistentes[i] || 1.0;
+        questoesSelecionadas.set(String(id), { titulo, tipo, pontos: pts });
+        ordem.push(String(id));
+        pickerItem.classList.add('selected');
+        pickerItem.querySelector('.picker-check').checked = true;
+      }
+    });
+    renderizarSelecionadas();
+  }
+});
+
+function toggleQuestao(id, titulo, tipo) {
+  const sid = String(id);
+  if (questoesSelecionadas.has(sid)) {
+    questoesSelecionadas.delete(sid);
+    ordem = ordem.filter(x => x !== sid);
+    document.getElementById('picker-' + id).classList.remove('selected');
+    document.getElementById('chk-' + id).checked = false;
+  } else {
+    questoesSelecionadas.set(sid, { titulo, tipo, pontos: 1.0 });
+    ordem.push(sid);
+    document.getElementById('picker-' + id).classList.add('selected');
+    document.getElementById('chk-' + id).checked = true;
+  }
+  renderizarSelecionadas();
+}
+
+function renderizarSelecionadas() {
+  const container = document.getElementById('questoesSelecionadas');
+  const hiddenDiv = document.getElementById('hiddenFields');
+  const emptyMsg = document.getElementById('emptyMsg');
+  const count = document.getElementById('countSelecionadas');
+
+  count.textContent = questoesSelecionadas.size + ' questão(ões)';
+
+  if (questoesSelecionadas.size === 0) {
+    container.innerHTML = '<div id="emptyMsg" class="text-muted" style="text-align:center;padding:20px;font-style:italic">Selecione questões no painel ao lado →</div>';
+    hiddenDiv.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = '';
+  hiddenDiv.innerHTML = '';
+
+  ordem.forEach((sid, i) => {
+    if (!questoesSelecionadas.has(sid)) return;
+    const q = questoesSelecionadas.get(sid);
+    const div = document.createElement('div');
+    div.className = 'questao-drag-item';
+    div.dataset.id = sid;
+    div.innerHTML = `
+      <span style="color:var(--muted);cursor:grab"><i class="fas fa-grip-vertical"></i></span>
+      <span style="font-family:var(--font-mono);color:var(--muted);font-size:.8rem;min-width:24px">${i+1}.</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${q.titulo}</div>
+        <span class="badge ${q.tipo === 'Objetiva' ? 'badge-objetiva' : 'badge-discursiva'}" style="font-size:.65rem">${q.tipo}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label style="font-size:.75rem;color:var(--muted)">Pts:</label>
+        <input type="number" step="0.5" min="0" value="${q.pontos}"
+          style="width:60px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;font-size:.82rem"
+          onchange="atualizarPontos('${sid}', this.value)"/>
+      </div>
+      <button type="button" class="btn-remove-alt" onclick="removerQuestao('${sid}')">
+        <i class="fas fa-times-circle"></i>
+      </button>
+    `;
+    container.appendChild(div);
+
+    // Hidden fields
+    const inp1 = document.createElement('input');
+    inp1.type = 'hidden'; inp1.name = 'questoesIds'; inp1.value = sid;
+    hiddenDiv.appendChild(inp1);
+    const inp2 = document.createElement('input');
+    inp2.type = 'hidden'; inp2.name = 'pontos'; inp2.value = q.pontos;
+    hiddenDiv.appendChild(inp2);
+  });
+
+  // Drag to reorder
+  if (typeof Sortable !== 'undefined') {
+    Sortable.create(container, {
+      handle: '[data-grip]',
+      animation: 150,
+      onEnd: function() {
+        ordem = Array.from(container.querySelectorAll('.questao-drag-item')).map(el => el.dataset.id);
+        renderizarSelecionadas();
+      }
+    });
+  }
+}
+
+function atualizarPontos(sid, val) {
+  if (questoesSelecionadas.has(sid)) {
+    questoesSelecionadas.get(sid).pontos = parseFloat(val) || 1.0;
+    // Atualizar hidden
+    const hiddenDiv = document.getElementById('hiddenFields');
+    const inputs = hiddenDiv.querySelectorAll('input[name="pontos"]');
+    const idx = ordem.indexOf(sid);
+    if (inputs[idx]) inputs[idx].value = val;
+  }
+}
+
+function removerQuestao(sid) {
+  questoesSelecionadas.delete(sid);
+  ordem = ordem.filter(x => x !== sid);
+  const el = document.getElementById('picker-' + sid);
+  if (el) { el.classList.remove('selected'); el.querySelector('.picker-check').checked = false; }
+  renderizarSelecionadas();
+}
+
+function filtrarQuestoes() {
+  const busca = document.getElementById('buscaQuestao').value.toLowerCase();
+  document.querySelectorAll('.picker-item').forEach(item => {
+    const titulo = (item.dataset.titulo || '').toLowerCase();
+    const disc = (item.dataset.disciplina || '').toLowerCase();
+    item.style.display = titulo.includes(busca) || disc.includes(busca) ? 'flex' : 'none';
+  });
+}
+</script>
+</th:block>
+</body>
+</html>

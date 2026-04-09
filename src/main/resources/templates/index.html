@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title>Dashboard | QuestionBase</title></head>
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Dashboard</h1>
+      <p>Bem-vindo ao QuestionBase — seu banco de questões com versionamento Git</p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/questoes/nova}" class="btn btn-primary"><i class="fas fa-plus"></i> Nova Questão</a>
+      <a th:href="@{/provas/nova}" class="btn btn-secondary"><i class="fas fa-file-alt"></i> Nova Prova</a>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-q"><i class="fas fa-question-circle"></i></div>
+      <div>
+        <div class="stat-value" th:text="${totalQuestoes}">0</div>
+        <div class="stat-label">Questões cadastradas</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-p"><i class="fas fa-file-alt"></i></div>
+      <div>
+        <div class="stat-value" th:text="${totalProvas}">0</div>
+        <div class="stat-label">Provas criadas</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--warning-light);color:var(--warning)"><i class="fas fa-code-branch"></i></div>
+      <div>
+        <div class="stat-value" style="font-size:1.2rem;padding-top:4px">Git</div>
+        <div class="stat-label">Versionamento ativo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-clock" style="color:var(--accent)"></i> Questões Recentes</span>
+        <a th:href="@{/questoes}" class="btn btn-sm btn-ghost">Ver todas</a>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div th:if="${#lists.isEmpty(ultimasQuestoes)}" class="empty-state" style="padding:40px">
+          <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+          <h3>Nenhuma questão ainda</h3>
+          <p style="margin-top:8px"><a th:href="@{/questoes/nova}" class="btn btn-primary btn-sm" style="margin-top:12px">Criar primeira questão</a></p>
+        </div>
+        <div th:each="q, iter : ${ultimasQuestoes}" style="padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px">
+          <span th:class="'badge ' + (${q.tipo.name() == 'OBJETIVA'} ? 'badge-objetiva' : 'badge-discursiva')"
+                th:text="${q.tipo.name() == 'OBJETIVA'} ? 'Obj' : 'Disc'"></span>
+          <a th:href="@{/questoes/{id}(id=${q.id})}"
+             style="flex:1;text-decoration:none;color:var(--ink);font-size:.9rem;font-weight:500"
+             th:text="${q.titulo}">Título</a>
+          <span class="text-muted" style="font-size:.75rem" th:text="${#temporals.format(q.atualizadoEm, 'dd/MM/yy')}">data</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-lightbulb" style="color:var(--warning)"></i> Como usar</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="background:var(--accent-light);color:var(--accent);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem">1</div>
+            <div><strong style="font-size:.875rem">Crie questões</strong><br><span class="text-muted" style="font-size:.8rem">Objetivas (múltipla escolha) ou discursivas, com suporte a Markdown e imagens.</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="background:var(--success-light);color:var(--success);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem">2</div>
+            <div><strong style="font-size:.875rem">Monte provas</strong><br><span class="text-muted" style="font-size:.8rem">Selecione questões, defina pontuação e gere PDFs com ou sem gabarito.</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="background:var(--warning-light);color:var(--warning);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem">3</div>
+            <div><strong style="font-size:.875rem">Histórico Git</strong><br><span class="text-muted" style="font-size:.8rem">Cada edição de questão gera um commit. Visualize versões antigas diretamente na interface.</span></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="background:var(--discursive-light);color:var(--discursive);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem">4</div>
+            <div><strong style="font-size:.875rem">Export seletivo</strong><br><span class="text-muted" style="font-size:.8rem">No banco de questões, selecione questões avulsas e exporte direto para PDF.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

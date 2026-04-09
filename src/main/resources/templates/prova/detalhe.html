@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="detalhe-header" style="margin-bottom:24px">
+    <div class="gap-8" style="margin-bottom:12px">
+      <a th:href="@{/provas}" class="btn btn-sm btn-ghost"><i class="fas fa-arrow-left"></i> Provas</a>
+      <span th:if="${prova.disciplina != null}" class="badge badge-neutral" th:text="${prova.disciplina}"></span>
+      <span class="badge badge-neutral" th:text="${#lists.size(prova.provaQuestoes)} + ' questão(ões)'"></span>
+    </div>
+    <h1 class="detalhe-title" th:text="${prova.titulo}">Título</h1>
+    <p th:if="${prova.descricao != null and !prova.descricao.isBlank()}"
+       class="text-muted" style="margin-bottom:12px" th:text="${prova.descricao}"></p>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <span class="text-muted" style="font-size:.8rem">
+        <i class="fas fa-clock"></i>
+        Atualizado em <span th:text="${#temporals.format(prova.atualizadoEm, 'dd/MM/yyyy HH:mm')}"></span>
+      </span>
+      <div class="page-actions">
+        <a th:href="@{/provas/{id}/pdf(id=${prova.id})}" class="btn btn-success">
+          <i class="fas fa-file-pdf"></i> PDF sem gabarito
+        </a>
+        <a th:href="@{/provas/{id}/pdf(id=${prova.id},gabarito=true)}" class="btn btn-secondary">
+          <i class="fas fa-file-pdf"></i> PDF com gabarito
+        </a>
+        <a th:href="@{/provas/{id}/editar(id=${prova.id})}" class="btn btn-secondary">
+          <i class="fas fa-pen"></i> Editar
+        </a>
+        <form th:action="@{/provas/{id}/excluir(id=${prova.id})}" method="post"
+              onsubmit="return confirm('Excluir esta prova?')">
+          <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questões -->
+  <div th:if="${#lists.isEmpty(prova.provaQuestoes)}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+    <h3>Nenhuma questão nesta prova</h3>
+    <a th:href="@{/provas/{id}/editar(id=${prova.id})}" class="btn btn-primary" style="margin-top:16px">Editar prova</a>
+  </div>
+
+  <div th:each="pq, iter : ${prova.provaQuestoes}" class="card" style="margin-bottom:16px">
+    <div class="card-header" style="background:var(--bg-2)">
+      <div style="display:flex;align-items:center;gap:12px;flex:1">
+        <span style="font-family:var(--font-mono);color:var(--accent);font-weight:700;font-size:1rem"
+              th:text="${iter.count}">1</span>
+        <span th:class="'badge ' + (${pq.questao.tipo.name() == 'OBJETIVA'} ? 'badge-objetiva' : 'badge-discursiva')"
+              th:text="${pq.questao.tipo.descricao}"></span>
+        <span th:if="${pq.questao.disciplina != null}" class="badge badge-neutral" th:text="${pq.questao.disciplina}"></span>
+        <span style="flex:1;font-weight:600;font-size:.9rem" th:text="${pq.questao.titulo}"></span>
+      </div>
+      <span class="badge badge-neutral" th:text="${pq.pontos} + ' pt(s)'"></span>
+    </div>
+    <div class="card-body">
+      <div class="markdown-body"
+           th:utext="${markdownService.renderizar(pq.questao.enunciado)}"></div>
+
+      <!-- Alternativas objetiva -->
+      <div th:if="${pq.questao.tipo.name() == 'OBJETIVA'}" class="alt-list" style="margin-top:16px">
+        <div th:each="alt : ${pq.questao.alternativas}"
+             th:class="'alt-item' + (${alt.correta} ? ' correta' : '')">
+          <span class="alt-item-letra" th:text="${alt.letra}">A</span>
+          <div class="alt-item-texto markdown-body"
+               th:utext="${markdownService.renderizar(alt.texto)}"></div>
+          <span th:if="${alt.correta}" class="alt-item-correta-badge">
+            <i class="fas fa-check"></i>
+          </span>
+        </div>
+      </div>
+
+      <!-- Linha resposta discursiva -->
+      <div th:if="${pq.questao.tipo.name() == 'DISCURSIVA'}" style="margin-top:16px">
+        <div class="text-muted" style="font-size:.8rem;margin-bottom:8px"><i class="fas fa-pen-line"></i> Espaço para resposta (no PDF)</div>
+        <div style="border-bottom:1px dashed var(--line);padding-bottom:8px;margin-bottom:4px" th:each="i : ${#numbers.sequence(1,3)}"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

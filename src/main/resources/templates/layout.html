@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle} + ' | QuestionBase'">QuestionBase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    <!-- EasyMDE para editor Markdown -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css"/>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<nav class="navbar">
+    <div class="nav-inner">
+        <a href="/" class="nav-brand">
+            <span class="brand-icon">◈</span>
+            <span class="brand-text">QuestionBase</span>
+        </a>
+        <div class="nav-links">
+            <a th:href="@{/}" th:classappend="${#strings.equals(pageTitle,'Dashboard')} ? 'active'">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a th:href="@{/questoes}" th:classappend="${#strings.startsWith(pageTitle,'Banco') or #strings.startsWith(pageTitle,'Quest')} ? 'active'">
+                <i class="fas fa-question-circle"></i> Questões
+            </a>
+            <a th:href="@{/provas}" th:classappend="${#strings.startsWith(pageTitle,'Prova') or #strings.startsWith(pageTitle,'Minha')} ? 'active'">
+                <i class="fas fa-file-alt"></i> Provas
+            </a>
+        </div>
+        <div class="nav-actions">
+            <a th:href="@{/questoes/nova}" class="btn-nav-primary">
+                <i class="fas fa-plus"></i> Nova Questão
+            </a>
+        </div>
+    </div>
+</nav>
+
+<main class="main-content">
+    <div th:if="${sucesso}" class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <span th:text="${sucesso}"></span>
+        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    <div th:if="${erro}" class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span th:text="${erro}"></span>
+        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+    </div>
+
+    <div layout:fragment="content"></div>
+</main>
+
+<footer class="footer">
+    <span>QuestionBase © 2024 — Sistema de Questões com versionamento Git</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

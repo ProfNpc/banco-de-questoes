@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 th:text="${isNova} ? 'Nova Questão' : 'Editar Questão'">Questão</h1>
+      <p>Use Markdown no enunciado e nas alternativas. Imagens podem ser inseridas via upload.</p>
+    </div>
+    <div class="page-actions">
+      <a th:href="${isNova} ? '/questoes' : '/questoes/' + ${questaoId}" class="btn btn-ghost">
+        <i class="fas fa-arrow-left"></i> Cancelar
+      </a>
+    </div>
+  </div>
+
+  <form th:action="${isNova} ? '/questoes/nova' : '/questoes/' + ${questaoId} + '/editar'"
+        method="post" id="questaoForm">
+
+    <div class="sidebar-layout">
+      <!-- Coluna principal -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- Card: Dados básicos -->
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Dados da Questão</span></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>Título / Identificação *</label>
+                <input type="text" name="titulo" th:value="${form.titulo}" required
+                       placeholder="Ex: Geometria — Área do triângulo (Enem 2022)"/>
+              </div>
+              <div class="form-group">
+                <label>Tipo *</label>
+                <select name="tipo" id="tipoSelect" onchange="toggleTipo()" required>
+                  <option value="">Selecione...</option>
+                  <option th:each="t : ${tiposQuestao}" th:value="${t.name()}" th:text="${t.descricao}"
+                          th:selected="${form.tipo != null and form.tipo.name() == t.name()}"></option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Dificuldade</label>
+                <select name="dificuldade">
+                  <option value="">Não definido</option>
+                  <option th:each="d : ${dificuldades}" th:value="${d.name()}" th:text="${d.descricao}"
+                          th:selected="${form.dificuldade != null and form.dificuldade.name() == d.name()}"></option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Disciplina</label>
+                <input type="text" name="disciplina" th:value="${form.disciplina}"
+                       list="disciplinasList" placeholder="Ex: Matemática"/>
+                <datalist id="disciplinasList">
+                  <option th:each="d : ${disciplinas}" th:value="${d}"></option>
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label>Assunto / Tópico</label>
+                <input type="text" name="assunto" th:value="${form.assunto}"
+                       placeholder="Ex: Geometria Plana"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Enunciado -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-align-left" style="color:var(--accent)"></i> Enunciado</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button type="button" class="btn btn-sm btn-ghost" onclick="togglePreview('enunciado')">
+                <i class="fas fa-eye"></i> Prévia
+              </button>
+              <label class="btn btn-sm btn-ghost" style="cursor:pointer;margin:0" title="Inserir imagem no enunciado">
+                <i class="fas fa-image"></i> Imagem
+                <input type="file" accept="image/*" style="display:none" onchange="uploadImagem(this, 'enunciado')"/>
+              </label>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <textarea id="enunciadoEditor" name="enunciado" rows="8" required
+                        placeholder="Digite o enunciado em Markdown..."
+                        th:text="${form.enunciado}"></textarea>
+              <p class="form-hint">Suporta Markdown: **negrito**, *itálico*, `código`, ![imagem](url), tabelas, listas...</p>
+            </div>
+            <div id="previewEnunciado" style="display:none" class="mt-16">
+              <div class="section-title">Prévia</div>
+              <div id="previewEnunciadoContent" class="preview-pane markdown-body"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Alternativas (objetiva) -->
+        <div id="secaoAlternativas" class="card" style="display:none">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-list-ul" style="color:var(--objective)"></i> Alternativas</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="text-muted" style="font-size:.8rem">Marque a(s) correta(s)</span>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="adicionarAlternativa()">
+                <i class="fas fa-plus"></i> Adicionar
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="alternativasContainer" style="min-height:80px">
+              <!-- Alternativas existentes (edição) -->
+              <div th:each="alt, iter : ${form.alternativas}"
+                   class="alternativa-item" th:id="'alt-' + ${iter.index}">
+                <span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>
+                <span class="alt-letra" th:text="${#strings.toString((char)(65 + iter.index))}">A</span>
+                <div class="alt-content">
+                  <textarea th:name="'alternativas[' + ${iter.index} + ']'"
+                             placeholder="Texto da alternativa (Markdown suportado)..."
+                             rows="2" th:text="${alt}"></textarea>
+                  <div class="alt-actions">
+                    <label class="correta-label">
+                      <input type="checkbox" class="correta-check"
+                             th:name="'alternativasCorretas'"
+                             th:value="${iter.index}"
+                             th:checked="${form.alternativasCorretas != null and form.alternativasCorretas.contains(iter.index)}"/>
+                      Correta
+                    </label>
+                    <label class="btn btn-sm btn-ghost" style="cursor:pointer;margin:0;font-size:.75rem">
+                      <i class="fas fa-image"></i>
+                      <input type="file" accept="image/*" style="display:none"
+                             th:onchange="'uploadImagem(this, \\'alt-' + ${iter.index} + '\\')'"  />
+                    </label>
+                    <button type="button" class="btn-remove-alt" onclick="removerAlternativa(this)">
+                      <i class="fas fa-times-circle"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="form-hint mt-16"><i class="fas fa-info-circle"></i> Arraste para reordenar as alternativas.</p>
+          </div>
+        </div>
+
+        <!-- Card: Gabarito/Resposta esperada (discursiva) -->
+        <div id="secaoGabarito" class="card" style="display:none">
+          <div class="card-header">
+            <span class="card-title"><i class="fas fa-check-double" style="color:var(--discursive)"></i> Gabarito / Resposta Esperada</span>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="togglePreview('gabarito')">
+              <i class="fas fa-eye"></i> Prévia
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <textarea id="gabaritoEditor" name="gabarito" rows="6"
+                        placeholder="Descreva a resposta esperada em Markdown (não aparece no PDF de prova)..."
+                        th:text="${form.gabarito}"></textarea>
+            </div>
+            <div id="previewGabarito" style="display:none" class="mt-16">
+              <div class="section-title">Prévia</div>
+              <div id="previewGabaritoContent" class="preview-pane markdown-body"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /col principal -->
+
+      <!-- Sidebar -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Ações</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+            <button type="submit" class="btn btn-primary" style="width:100%">
+              <i class="fas fa-save"></i>
+              <span th:text="${isNova} ? 'Criar Questão' : 'Salvar Alterações'"></span>
+            </button>
+            <a th:if="${!isNova}" th:href="@{/questoes/{id}(id=${questaoId})}" class="btn btn-ghost" style="width:100%;justify-content:center">
+              <i class="fas fa-eye"></i> Visualizar
+            </a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title" style="font-size:.85rem"><i class="fas fa-markdown"></i> Dicas Markdown</span></div>
+          <div class="card-body" style="font-size:.78rem;line-height:1.8;color:var(--slate)">
+            <code style="display:block;background:var(--bg-2);padding:8px;border-radius:6px;font-size:.78rem">
+              **negrito**<br>
+              *itálico*<br>
+              `código inline`<br>
+              ![alt](url)<br>
+              # Título<br>
+              - item lista<br>
+              1. numerado<br>
+              &gt; citação<br>
+              $$formula$$
+            </code>
+            <p class="form-hint" style="margin-top:8px">
+              Para inserir imagens, use o botão <strong>Imagem</strong> ou cole a URL diretamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+// Inicializar editores Markdown
+const editorEnunciado = new EasyMDE({
+  element: document.getElementById('enunciadoEditor'),
+  spellChecker: false,
+  autosave: { enabled: true, uniqueId: 'enunciado-draft' },
+  toolbar: ['bold','italic','strikethrough','|','heading','|','unordered-list','ordered-list','|','code','|','table','|','preview','side-by-side','fullscreen'],
+  placeholder: 'Digite o enunciado em Markdown...',
+  minHeight: '180px',
+});
+
+const editorGabarito = new EasyMDE({
+  element: document.getElementById('gabaritoEditor'),
+  spellChecker: false,
+  toolbar: ['bold','italic','|','unordered-list','ordered-list','|','preview'],
+  placeholder: 'Gabarito/resposta esperada em Markdown...',
+  minHeight: '140px',
+});
+
+// Controle de tipo
+function toggleTipo() {
+  const tipo = document.getElementById('tipoSelect').value;
+  document.getElementById('secaoAlternativas').style.display = tipo === 'OBJETIVA' ? 'block' : 'none';
+  document.getElementById('secaoGabarito').style.display = (tipo === 'DISCURSIVA' || tipo === 'OBJETIVA') ? 'block' : 'none';
+
+  if (tipo === 'OBJETIVA' && document.querySelectorAll('.alternativa-item').length === 0) {
+    // Auto-criar 4 alternativas iniciais
+    for (let i = 0; i < 4; i++) adicionarAlternativa();
+  }
+}
+
+// Chamar ao carregar para restaurar estado
+window.addEventListener('load', function() {
+  const tipo = document.getElementById('tipoSelect').value;
+  if (tipo) toggleTipo();
+});
+
+
+
+function adicionarAlternativa() {
+  const container = document.getElementById('alternativasContainer');
+  //Alternativas dinâmicas
+  let altCount = document.querySelectorAll('.alternativa-item').length;
+  const letra = String.fromCharCode(65 + altCount);
+  const div = document.createElement('div');
+  div.className = 'alternativa-item';
+  div.id = 'alt-' + altCount;
+  div.innerHTML = `
+    <span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>
+    <span class="alt-letra">${letra}</span>
+    <div class="alt-content">
+      <textarea name="alternativas[${altCount}]"
+        placeholder="Texto da alternativa (Markdown suportado)..." rows="2"></textarea>
+      <div class="alt-actions">
+        <label class="correta-label">
+          <input type="checkbox" class="correta-check" name="alternativasCorretas" value="${altCount}"/>
+          Correta
+        </label>
+        <label class="btn btn-sm btn-ghost" style="cursor:pointer;margin:0;font-size:.75rem">
+          <i class="fas fa-image"></i>
+          <input type="file" accept="image/*" style="display:none" onchange="uploadImagem(this, 'alt-${altCount}')"/>
+        </label>
+        <button type="button" class="btn-remove-alt" onclick="removerAlternativa(this)">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  altCount++;
+  renumerarAlternativas();
+}
+
+function removerAlternativa(btn) {
+  btn.closest('.alternativa-item').remove();
+  renumerarAlternativas();
+}
+
+function renumerarAlternativas() {
+  document.querySelectorAll('.alternativa-item').forEach((item, i) => {
+    item.querySelector('.alt-letra').textContent = String.fromCharCode(65 + i);
+    const ta = item.querySelector('textarea');
+    ta.name = 'alternativas[' + i + ']';
+    const ck = item.querySelector('.correta-check');
+    ck.value = i;
+  });
+  altCount = document.querySelectorAll('.alternativa-item').length;
+}
+
+// Sortable para reordenar alternativas
+if (typeof Sortable !== 'undefined') {
+  Sortable.create(document.getElementById('alternativasContainer'), {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: renumerarAlternativas,
+  });
+}
+
+// Upload de imagem
+async function uploadImagem(input, target) {
+  if (!input.files || !input.files[0]) return;
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  try {
+    const resp = await fetch('/questoes/upload-imagem', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.markdown) {
+      if (target === 'enunciado') {
+        const cm = editorEnunciado.codemirror;
+        cm.replaceSelection(data.markdown);
+      } else if (target === 'gabarito') {
+        const cm = editorGabarito.codemirror;
+        cm.replaceSelection(data.markdown);
+      } else {
+        // Alternativa
+        const altId = target; // 'alt-0', 'alt-1', etc.
+        const altEl = document.getElementById(altId);
+        if (altEl) {
+          const ta = altEl.querySelector('textarea');
+          const pos = ta.selectionStart;
+          ta.value = ta.value.substring(0, pos) + data.markdown + ta.value.substring(pos);
+        }
+      }
+    }
+  } catch (e) { alert('Erro ao fazer upload da imagem: ' + e.message); }
+  input.value = '';
+}
+
+// Prévia Markdown
+async function togglePreview(tipo) {
+  const previewDiv = tipo === 'enunciado' ? document.getElementById('previewEnunciado') : document.getElementById('previewGabarito');
+  const contentDiv = tipo === 'enunciado' ? document.getElementById('previewEnunciadoContent') : document.getElementById('previewGabaritoContent');
+  const editor = tipo === 'enunciado' ? editorEnunciado : editorGabarito;
+
+  if (previewDiv.style.display === 'none') {
+    const md = editor.value();
+    if (md.trim()) {
+      const resp = await fetch('/questoes/preview-markdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdown: md })
+      });
+      const data = await resp.json();
+      contentDiv.innerHTML = data.html || '<span class="preview-empty">Nenhum conteúdo</span>';
+    } else {
+      contentDiv.innerHTML = '<span class="preview-empty">Digite algo no editor para ver a prévia.</span>';
+    }
+    previewDiv.style.display = 'block';
+  } else {
+    previewDiv.style.display = 'none';
+  }
+}
+</script>
+</th:block>
+</body>
+</html>

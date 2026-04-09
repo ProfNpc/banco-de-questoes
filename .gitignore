@@ -1,0 +1,17 @@
+.metadata/
+.classpath
+.project
+.settings/
+.sts4-cache/
+bin/
+
+target/
+.gradle/
+build/
+
+*.log
+.env
+application-local.properties
+application-local.yml
+
+data/

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Minhas Provas</h1>
+      <p th:text="${#lists.size(provas)} + ' prova(s) cadastrada(s)'"></p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/provas/nova}" class="btn btn-primary"><i class="fas fa-plus"></i> Nova Prova</a>
+    </div>
+  </div>
+
+  <div th:if="${#lists.isEmpty(provas)}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
+    <h3>Nenhuma prova ainda</h3>
+    <p style="margin-top:8px">
+      <a th:href="@{/provas/nova}" class="btn btn-primary" style="margin-top:12px">
+        <i class="fas fa-plus"></i> Criar primeira prova
+      </a>
+    </p>
+  </div>
+
+  <div class="questao-grid fade-in">
+    <div th:each="prova : ${provas}" class="prova-card">
+      <h3 class="prova-titulo" th:text="${prova.titulo}">Título</h3>
+      <div class="questao-card-meta">
+        <span th:if="${prova.disciplina != null}" class="badge badge-neutral" th:text="${prova.disciplina}"></span>
+        <span class="badge badge-neutral"
+              th:text="${#lists.size(prova.provaQuestoes)} + ' questão(ões)'"></span>
+      </div>
+      <p th:if="${prova.descricao != null and !prova.descricao.isBlank()}"
+         class="text-muted" style="font-size:.82rem;margin-top:8px;line-height:1.4"
+         th:text="${prova.descricao}"></p>
+      <div class="questao-card-footer">
+        <span class="text-muted" style="font-size:.75rem"
+              th:text="${#temporals.format(prova.atualizadoEm, 'dd/MM/yyyy')}"></span>
+        <div class="questao-card-actions" style="opacity:1">
+          <a th:href="@{/provas/{id}(id=${prova.id})}" class="btn btn-sm btn-ghost"><i class="fas fa-eye"></i></a>
+          <a th:href="@{/provas/{id}/editar(id=${prova.id})}" class="btn btn-sm btn-ghost"><i class="fas fa-pen"></i></a>
+          <a th:href="@{/provas/{id}/pdf(id=${prova.id})}" class="btn btn-sm btn-success" title="Baixar PDF">
+            <i class="fas fa-file-pdf"></i>
+          </a>
+          <form th:action="@{/provas/{id}/excluir(id=${prova.id})}" method="post"
+                onsubmit="return confirm('Excluir esta prova?')">
+            <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Banco de Questões</h1>
+      <p th:text="'Total: ' + ${questoes.totalElements} + ' questão(ões) encontrada(s)'"></p>
+    </div>
+    <div class="page-actions">
+      <button id="btnExportarSelecionadas" class="btn btn-secondary" style="display:none" onclick="abrirModalExport()">
+        <i class="fas fa-file-pdf"></i> Exportar Selecionadas
+      </button>
+      <a th:href="@{/questoes/nova}" class="btn btn-primary"><i class="fas fa-plus"></i> Nova Questão</a>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" th:action="@{/questoes}" class="filters-bar">
+    <div class="filter-group grow">
+      <label>Buscar</label>
+      <input type="text" name="busca" th:value="${filtroBusca}" placeholder="Título ou enunciado..."/>
+    </div>
+    <div class="filter-group">
+      <label>Disciplina</label>
+      <select name="disciplina">
+        <option value="">Todas</option>
+        <option th:each="d : ${disciplinas}" th:value="${d}" th:text="${d}"
+                th:selected="${d == filtroDisc}"></option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Tipo</label>
+      <select name="tipo">
+        <option value="">Todos</option>
+        <option th:each="t : ${tiposQuestao}" th:value="${t.name()}" th:text="${t.descricao}"
+                th:selected="${t.name() == filtroTipo}"></option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+      <a th:href="@{/questoes}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+    </div>
+  </form>
+
+  <!-- Grid de questões -->
+  <div th:if="${questoes.isEmpty()}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-question-circle"></i></div>
+    <h3>Nenhuma questão encontrada</h3>
+    <p>Tente ajustar os filtros ou <a th:href="@{/questoes/nova}">crie uma nova questão</a>.</p>
+  </div>
+
+  <div class="questao-grid fade-in">
+    <div th:each="q : ${questoes.content}"
+         th:class="'questao-card tipo-' + ${#strings.toLowerCase(q.tipo.name())}"
+         th:id="'qcard-' + ${q.id}">
+
+      <div class="questao-card-top">
+        <div class="questao-card-titulo" th:text="${q.titulo}">Título</div>
+        <input type="checkbox" class="questao-select-check picker-check"
+               th:value="${q.id}" onchange="toggleSelecao(this)"
+               title="Selecionar para exportar"/>
+      </div>
+
+      <div class="questao-card-meta">
+        <span th:class="'badge ' + (${q.tipo.name() == 'OBJETIVA'} ? 'badge-objetiva' : 'badge-discursiva')"
+              th:text="${q.tipo.descricao}"></span>
+        <span th:if="${q.dificuldade != null}"
+              th:class="'badge badge-' + ${#strings.toLowerCase(q.dificuldade.name())}"
+              th:text="${q.dificuldade.descricao}"></span>
+        <span th:if="${q.disciplina != null}" class="badge badge-neutral" th:text="${q.disciplina}"></span>
+        <span class="badge badge-version" th:text="'v' + ${q.versao}"></span>
+      </div>
+
+      <div class="questao-card-enunciado" th:text="${q.enunciado}"></div>
+
+      <div class="questao-card-footer">
+        <span class="text-muted" style="font-size:.75rem"
+              th:text="${#temporals.format(q.atualizadoEm, 'dd/MM/yyyy HH:mm')}"></span>
+        <div class="questao-card-actions">
+          <a th:href="@{/questoes/{id}(id=${q.id})}" class="btn btn-sm btn-ghost" title="Ver">
+            <i class="fas fa-eye"></i>
+          </a>
+          <a th:href="@{/questoes/{id}/editar(id=${q.id})}" class="btn btn-sm btn-ghost" title="Editar">
+            <i class="fas fa-pen"></i>
+          </a>
+          <form th:action="@{/questoes/{id}/excluir(id=${q.id})}" method="post"
+                onsubmit="return confirm('Excluir esta questão?')">
+            <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
+              <i class="fas fa-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginação -->
+  <div th:if="${questoes.totalPages > 1}" class="pagination">
+    <div class="page-item" th:classappend="${questoes.first} ? 'disabled'">
+      <a th:href="@{/questoes(page=${questoes.number - 1}, size=${questoes.size}, disciplina=${filtroDisc}, tipo=${filtroTipo}, busca=${filtroBusca})}">&laquo;</a>
+    </div>
+    <div th:each="i : ${#numbers.sequence(0, questoes.totalPages - 1)}"
+         class="page-item" th:classappend="${i == questoes.number} ? 'active'">
+      <a th:if="${i != questoes.number}"
+         th:href="@{/questoes(page=${i}, size=${questoes.size}, disciplina=${filtroDisc}, tipo=${filtroTipo}, busca=${filtroBusca})}"
+         th:text="${i + 1}"></a>
+      <span th:if="${i == questoes.number}" th:text="${i + 1}"></span>
+    </div>
+    <div class="page-item" th:classappend="${questoes.last} ? 'disabled'">
+      <a th:href="@{/questoes(page=${questoes.number + 1}, size=${questoes.size}, disciplina=${filtroDisc}, tipo=${filtroTipo}, busca=${filtroBusca})}">&raquo;</a>
+    </div>
+  </div>
+
+  <!-- Export bar flutuante -->
+  <div id="exportBar" class="export-bar">
+    <i class="fas fa-check-circle" style="color:var(--success)"></i>
+    <span class="export-bar-count"><span id="countSelecionadas">0</span> questão(ões) selecionada(s)</span>
+    <button class="btn btn-sm" style="background:var(--accent);color:white" onclick="abrirModalExport()">
+      <i class="fas fa-file-pdf"></i> Gerar PDF
+    </button>
+    <button class="btn btn-sm btn-ghost" style="border-color:rgba(255,255,255,.3);color:white" onclick="limparSelecao()">
+      Limpar
+    </button>
+  </div>
+
+  <!-- Modal export -->
+  <div id="modalExport" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Exportar Questões para PDF</span>
+        <button class="modal-close" onclick="fecharModalExport()">×</button>
+      </div>
+      <div class="form-group" style="margin-bottom:20px">
+        <label>Título do documento</label>
+        <input type="text" id="tituloExport" value="Questões Selecionadas" class=""/>
+      </div>
+      <p class="text-muted" style="margin-bottom:16px">
+        <i class="fas fa-info-circle"></i>
+        O PDF será gerado <strong>sem marcar as respostas corretas</strong>.
+        <span id="infoSelecionadas"></span>
+      </p>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="fecharModalExport()">Cancelar</button>
+        <button class="btn btn-primary" onclick="exportarPdf()">
+          <i class="fas fa-download"></i> Baixar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<th:block layout:fragment="scripts">
+<script>
+const selecionadas = new Set();
+
+function toggleSelecao(checkbox) {
+  const id = checkbox.value;
+  if (checkbox.checked) selecionadas.add(id);
+  else selecionadas.delete(id);
+  atualizarUI();
+}
+
+function atualizarUI() {
+  const n = selecionadas.size;
+  document.getElementById('countSelecionadas').textContent = n;
+  const bar = document.getElementById('exportBar');
+  if (n > 0) bar.classList.add('visible'); else bar.classList.remove('visible');
+  const btn = document.getElementById('btnExportarSelecionadas');
+  if (btn) { if (n > 0) btn.style.display = 'flex'; else btn.style.display = 'none'; }
+}
+
+function limparSelecao() {
+  selecionadas.clear();
+  document.querySelectorAll('.questao-select-check').forEach(c => c.checked = false);
+  atualizarUI();
+}
+
+function abrirModalExport() {
+  document.getElementById('infoSelecionadas').textContent =
+    ' Serão exportadas ' + selecionadas.size + ' questão(ões).';
+  document.getElementById('modalExport').classList.add('open');
+}
+
+function fecharModalExport() {
+  document.getElementById('modalExport').classList.remove('open');
+}
+
+function exportarPdf() {
+  const titulo = document.getElementById('tituloExport').value || 'Questões Selecionadas';
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/exportar-pdf';
+  selecionadas.forEach(id => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'questoesIds'; inp.value = id;
+    form.appendChild(inp);
+  });
+  const tInp = document.createElement('input');
+  tInp.type = 'hidden'; tInp.name = 'titulo'; tInp.value = titulo;
+  form.appendChild(tInp);
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+  fecharModalExport();
+}
+
+// Fechar modal clicando fora
+document.getElementById('modalExport').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalExport();
+});
+</script>
+</th:block>
+</body>
+</html>
