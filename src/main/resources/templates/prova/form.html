@@ -94,7 +94,7 @@
                    th:data-titulo="${q.titulo}"
                    th:data-tipo="${q.tipo.name()}"
                    th:data-disciplina="${q.disciplina}"
-                   th:onclick="'toggleQuestao(' + ${q.id} + ', \'' + ${q.titulo} + '\', \'' + ${q.tipo.descricao} + '\')'">
+                   th:onclick="toggleQuestao([[${q.id}]], [[${q.titulo}]] , [[${q.tipo.descricao}]])">
                 <input type="checkbox" class="picker-check" th:id="'chk-' + ${q.id}" onclick="event.stopPropagation()"/>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" th:text="${q.titulo}"></div>
