@@ -32,12 +32,12 @@
   --shadow-md: 0 4px 20px rgba(0,0,0,.10);
   --font-sans: 'DM Sans', sans-serif;
   --font-mono: 'Space Mono', monospace;
-  --font-serif: 'DM Serif Display', serif;
+  /*--font-serif: 'DM Serif Display', serif;*/
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 15px; scroll-behavior: smooth; }
+html { font-size: 20px; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-sans);
