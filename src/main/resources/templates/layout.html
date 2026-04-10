@@ -10,10 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
     <!-- EasyMDE para editor Markdown -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
 </head>
 <body>
+
+	
 <nav class="navbar">
     <div class="nav-inner">
         <a href="/" class="nav-brand">
@@ -58,8 +60,12 @@
     <span>QuestionBase © 2024 — Sistema de Questões com versionamento Git</span>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+
 <th:block layout:fragment="scripts"></th:block>
+
+
+
 </body>
 </html>
