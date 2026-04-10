@@ -15,3 +15,6 @@ application-local.properties
 application-local.yml
 
 data/
+uploads/
+git-questoes/
+
