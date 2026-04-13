@@ -21,7 +21,9 @@ public class MarkdownService {
     }
 
     public String renderizar(String markdown) {
-        if (markdown == null || markdown.isBlank()) return "";
+        if (markdown == null || markdown.isBlank()) {
+        	return "";
+        }
         Node document = parser.parse(markdown);
         return renderer.render(document);
     }

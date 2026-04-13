@@ -104,7 +104,9 @@ public class GitService {
         try {
             Repository repo = git.getRepository();
             ObjectId commitId = repo.resolve(commitHash);
-            if (commitId == null) return null;
+            if (commitId == null) {
+            	return null;
+            }
             RevCommit commit;
             try (RevWalk rw = new RevWalk(repo)) {
                 commit = rw.parseCommit(commitId);
