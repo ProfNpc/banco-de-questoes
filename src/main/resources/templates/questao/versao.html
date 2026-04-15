@@ -10,23 +10,26 @@
       <p th:text="'Questão: ' + ${questao.titulo}"></p>
     </div>
     <div class="page-actions">
+      <a th:href="@{/questoes/{id}/comparar(id=${questao.id})}" class="btn btn-secondary">
+        <i class="fas fa-exchange-alt"></i> Comparar versões
+      </a>
       <a th:href="@{/questoes/{id}(id=${questao.id})}" class="btn btn-ghost">
-        <i class="fas fa-arrow-left"></i> Voltar para versão atual
+        <i class="fas fa-arrow-left"></i> Voltar para atual
       </a>
     </div>
   </div>
 
   <div class="sidebar-layout">
     <div>
-      <!-- Banner de aviso -->
       <div class="alert" style="background:var(--warning-light);color:#92400e;margin-bottom:20px">
         <i class="fas fa-history"></i>
-        <span>Você está visualizando uma versão antiga desta questão.
-          Commit: <strong class="text-mono" th:text="${hashAtual.length() > 8 ? hashAtual.substring(0, 8) : hashAtual}"></strong>
+        <span>Versão histórica — Commit:
+          <strong class="text-mono"
+                  th:text="${hashAtual.length() > 8 ? hashAtual.substring(0,8) : hashAtual}"></strong>
         </span>
       </div>
 
-      <div class="card">
+      <div class="card" style="margin-bottom:16px">
         <div class="card-header">
           <span class="card-title">Conteúdo desta versão</span>
         </div>
@@ -37,14 +40,29 @@
           </div>
           <div id="tab-renderizado" class="tab-pane active markdown-body" th:utext="${conteudoHtml}"></div>
           <div id="tab-fonte" class="tab-pane">
-            <pre style="background:var(--ink-2);color:#e8e8f0;padding:16px;border-radius:8px;overflow-x:auto;font-size:.82rem;white-space:pre-wrap;line-height:1.6"
+            <pre style="background:var(--ink-2);color:#e8e8f0;padding:16px;border-radius:8px;
+                        overflow-x:auto;font-size:.82rem;white-space:pre-wrap;line-height:1.6"
                  th:text="${conteudoMd}"></pre>
           </div>
         </div>
       </div>
+
+      <!-- Ações desta versão -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Ações com esta versão</span></div>
+        <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+          <a th:href="@{/questoes/{id}/nova-de-versao/{hash}(id=${questao.id},hash=${hashAtual})}"
+             class="btn btn-primary">
+            <i class="fas fa-copy"></i> Criar nova questão baseada nesta versão
+          </a>
+          <a th:href="@{/questoes/{id}/comparar(id=${questao.id},hashB=${hashAtual})}"
+             class="btn btn-secondary">
+            <i class="fas fa-exchange-alt"></i> Comparar com outra versão
+          </a>
+        </div>
+      </div>
     </div>
 
-    <!-- Sidebar com todas as versões -->
     <div>
       <div class="card">
         <div class="card-header">
@@ -52,19 +70,24 @@
         </div>
         <div class="versoes-list">
           <div th:each="v, iter : ${versoes}"
-               th:class="'versao-item' + (${v.hash == hashAtual} ? '' : '')"
                th:style="${v.hash == hashAtual} ? 'background:var(--accent-light)' : ''">
-            <div style="flex:1">
-              <a th:href="@{/questoes/{id}/versoes/{hash}(id=${questao.id},hash=${v.hash})}"
-                 th:class="'versao-hash' + (${v.hash == hashAtual} ? '' : '')"
-                 th:text="${v.hashCurto}"></a>
-              <div class="versao-msg" th:text="${v.mensagem}"></div>
-              <div class="versao-meta">
-                <span th:text="${#temporals.format(v.data, 'dd/MM/yy HH:mm')}"></span>
+            <div class="versao-item">
+              <div style="flex:1">
+                <a th:href="@{/questoes/{id}/versoes/{hash}(id=${questao.id},hash=${v.hash})}"
+                   class="versao-hash" th:text="${v.hashCurto}"></a>
+                <div class="versao-msg" th:text="${v.mensagem}"></div>
+                <div class="versao-meta" th:text="${#temporals.format(v.data,'dd/MM/yy HH:mm')}"></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                <span th:if="${iter.first}" class="badge badge-neutral" style="font-size:.65rem">ATUAL</span>
+                <span th:if="${v.hash == hashAtual and !iter.first}"
+                      class="badge" style="background:var(--accent-light);color:var(--accent);font-size:.65rem">ESTA</span>
+                <a th:href="@{/questoes/{id}/nova-de-versao/{hash}(id=${questao.id},hash=${v.hash})}"
+                   class="btn btn-sm btn-ghost" title="Criar questão desta versão" style="font-size:.7rem">
+                  <i class="fas fa-copy"></i>
+                </a>
               </div>
             </div>
-            <span th:if="${iter.first}" class="badge badge-neutral" style="font-size:.68rem">ATUAL</span>
-            <span th:if="${v.hash == hashAtual and !iter.first}" class="badge" style="background:var(--accent-light);color:var(--accent);font-size:.68rem">ESTA</span>
           </div>
         </div>
       </div>

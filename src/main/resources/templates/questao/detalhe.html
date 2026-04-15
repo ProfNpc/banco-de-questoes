@@ -4,7 +4,6 @@
       layout:decorate="~{layout}">
 <body>
 <div layout:fragment="content">
-  <!-- Header da questão -->
   <div th:class="'detalhe-header tipo-' + ${#strings.toLowerCase(questao.tipo.name())}">
     <div class="gap-8">
       <a th:href="@{/questoes}" class="btn btn-sm btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
@@ -21,13 +20,20 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <span class="text-muted" style="font-size:.8rem">
         <i class="fas fa-clock"></i>
-        Atualizado em <span th:text="${#temporals.format(questao.atualizadoEm, 'dd/MM/yyyy HH:mm')}"></span>
+        Atualizado em <span th:text="${#temporals.format(questao.atualizadoEm,'dd/MM/yyyy HH:mm')}"></span>
         <span th:if="${questao.gitCommitHash != null}">
           — <i class="fas fa-code-branch"></i>
-          <span class="text-mono" th:text="${#strings.substring(questao.gitCommitHash, 0, 8)}"></span>
+          <span class="text-mono" th:text="${#strings.substring(questao.gitCommitHash,0,8)}"></span>
         </span>
       </span>
       <div class="page-actions">
+        <a th:href="@{/questoes/{id}/nova-de-versao/current(id=${questao.id})}" class="btn btn-sm btn-secondary"
+           title="Cria uma nova questão copiando o conteúdo atual">
+          <i class="fas fa-copy"></i> Criar cópia
+        </a>
+        <a th:href="@{/questoes/{id}/comparar(id=${questao.id})}" class="btn btn-sm btn-secondary">
+          <i class="fas fa-exchange-alt"></i> Comparar versões
+        </a>
         <a th:href="@{/questoes/{id}/editar(id=${questao.id})}" class="btn btn-sm btn-secondary">
           <i class="fas fa-pen"></i> Editar
         </a>
@@ -40,10 +46,7 @@
   </div>
 
   <div class="sidebar-layout">
-    <!-- Conteúdo principal -->
     <div style="display:flex;flex-direction:column;gap:20px">
-
-      <!-- Tabs -->
       <div class="tabs">
         <button class="tab-btn active" onclick="showTab('enunciado', this)">Enunciado</button>
         <button class="tab-btn" onclick="showTab('alternativas', this)" th:if="${questao.tipo.name() == 'OBJETIVA'}">Alternativas</button>
@@ -91,10 +94,9 @@
           </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Sidebar: versões -->
+    <!-- Sidebar -->
     <div>
       <div class="card">
         <div class="card-header">
@@ -107,15 +109,25 @@
           <div th:each="v, iter : ${versoes}" class="versao-item">
             <div style="flex:1">
               <a th:href="@{/questoes/{id}/versoes/{hash}(id=${questao.id},hash=${v.hash})}"
-                 class="versao-hash"
-                 th:text="${v.hashCurto}">abc1234</a>
+                 class="versao-hash" th:text="${v.hashCurto}">abc1234</a>
               <div class="versao-msg" th:text="${v.mensagem}">mensagem</div>
               <div class="versao-meta">
-                <span th:text="${#temporals.format(v.data, 'dd/MM/yy HH:mm')}"></span>
+                <span th:text="${#temporals.format(v.data,'dd/MM/yy HH:mm')}"></span>
               </div>
             </div>
-            <span th:if="${iter.first}" class="badge badge-neutral" style="font-size:.68rem">ATUAL</span>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <span th:if="${iter.first}" class="badge badge-neutral" style="font-size:.65rem">ATUAL</span>
+              <a th:href="@{/questoes/{id}/nova-de-versao/{hash}(id=${questao.id},hash=${v.hash})}"
+                 class="btn btn-sm btn-ghost" style="font-size:.7rem" title="Criar nova questão desta versão">
+                <i class="fas fa-copy"></i>
+              </a>
+            </div>
           </div>
+        </div>
+        <div th:unless="${#lists.isEmpty(versoes)}" style="padding:12px 16px;border-top:1px solid var(--line)">
+          <a th:href="@{/questoes/{id}/comparar(id=${questao.id})}" class="btn btn-ghost" style="width:100%;justify-content:center">
+            <i class="fas fa-exchange-alt"></i> Comparar versões
+          </a>
         </div>
       </div>
 

@@ -37,15 +37,12 @@ public class QuestaoController {
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String busca,
             Model model) {
-
         Questao.TipoQuestao tipoEnum = null;
         if (tipo != null && !tipo.isBlank()) {
             try { tipoEnum = Questao.TipoQuestao.valueOf(tipo); } catch (Exception ignored) {}
         }
-
         Page<Questao> questoesPage = questaoService.buscar(disciplina, tipoEnum, busca,
                 PageRequest.of(page, size, Sort.by("atualizadoEm").descending()));
-
         model.addAttribute("questoes", questoesPage);
         model.addAttribute("disciplinas", questaoService.listarDisciplinas());
         model.addAttribute("tiposQuestao", Questao.TipoQuestao.values());
@@ -69,14 +66,13 @@ public class QuestaoController {
     }
 
     @PostMapping("/nova")
-    public String salvar(@ModelAttribute QuestaoForm form,
-                         RedirectAttributes redirectAttributes) {
+    public String salvar(@ModelAttribute QuestaoForm form, RedirectAttributes ra) {
         try {
             Questao q = questaoService.salvar(form);
-            redirectAttributes.addFlashAttribute("sucesso", "Questão criada com sucesso!");
+            ra.addFlashAttribute("sucesso", "Questão criada com sucesso!");
             return "redirect:/questoes/" + q.getId();
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", "Erro ao salvar: " + e.getMessage());
+            ra.addFlashAttribute("erro", "Erro ao salvar: " + e.getMessage());
             return "redirect:/questoes/nova";
         }
     }
@@ -85,7 +81,6 @@ public class QuestaoController {
     public String ver(@PathVariable Long id, Model model) {
         Questao q = questaoService.buscarPorId(id)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
-
         model.addAttribute("questao", q);
         model.addAttribute("enunciadoHtml", markdownService.renderizar(q.getEnunciado()));
         model.addAttribute("gabaritoHtml", markdownService.renderizar(q.getGabarito()));
@@ -98,7 +93,6 @@ public class QuestaoController {
     public String editar(@PathVariable Long id, Model model) {
         Questao q = questaoService.buscarPorId(id)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
-
         QuestaoForm form = new QuestaoForm();
         form.setTitulo(q.getTitulo());
         form.setEnunciado(q.getEnunciado());
@@ -107,14 +101,10 @@ public class QuestaoController {
         form.setAssunto(q.getAssunto());
         form.setDificuldade(q.getDificuldade());
         form.setGabarito(q.getGabarito());
-
         for (var alt : q.getAlternativas()) {
             form.getAlternativas().add(alt.getTexto());
-            if (Boolean.TRUE.equals(alt.getCorreta())) {
-                form.getAlternativasCorretas().add(alt.getOrdem());
-            }
+            if (Boolean.TRUE.equals(alt.getCorreta())) form.getAlternativasCorretas().add(alt.getOrdem());
         }
-
         model.addAttribute("form", form);
         model.addAttribute("questaoId", id);
         model.addAttribute("tiposQuestao", Questao.TipoQuestao.values());
@@ -126,29 +116,29 @@ public class QuestaoController {
     }
 
     @PostMapping("/{id}/editar")
-    public String atualizar(@PathVariable Long id,
-                            @ModelAttribute QuestaoForm form,
-                            RedirectAttributes redirectAttributes) {
+    public String atualizar(@PathVariable Long id, @ModelAttribute QuestaoForm form, RedirectAttributes ra) {
         try {
             questaoService.atualizar(id, form);
-            redirectAttributes.addFlashAttribute("sucesso", "Questão atualizada com sucesso!");
+            ra.addFlashAttribute("sucesso", "Questão atualizada com sucesso!");
             return "redirect:/questoes/" + id;
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", "Erro ao atualizar: " + e.getMessage());
+            ra.addFlashAttribute("erro", "Erro ao atualizar: " + e.getMessage());
             return "redirect:/questoes/" + id + "/editar";
         }
     }
 
     @PostMapping("/{id}/excluir")
-    public String excluir(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    public String excluir(@PathVariable Long id, RedirectAttributes ra) {
         try {
             questaoService.excluir(id);
-            redirectAttributes.addFlashAttribute("sucesso", "Questão excluída.");
+            ra.addFlashAttribute("sucesso", "Questão excluída.");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", "Erro ao excluir: " + e.getMessage());
+            ra.addFlashAttribute("erro", "Erro ao excluir: " + e.getMessage());
         }
         return "redirect:/questoes";
     }
+
+    // ── Versões ───────────────────────────────────────────────────────────────
 
     @GetMapping("/{id}/versoes/{hash}")
     public String verVersao(@PathVariable Long id, @PathVariable String hash, Model model) {
@@ -156,17 +146,85 @@ public class QuestaoController {
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
         String conteudo = questaoService.obterConteudoVersao(id, hash);
         List<GitService.VersaoQuestao> versoes = questaoService.listarVersoes(id);
-
         model.addAttribute("questao", q);
         model.addAttribute("conteudoMd", conteudo);
         model.addAttribute("conteudoHtml", markdownService.renderizar(conteudo));
         model.addAttribute("hashAtual", hash);
         model.addAttribute("versoes", versoes);
-        model.addAttribute("pageTitle", "Versão " + hash.substring(0, 8) + " - " + q.getTitulo());
+        model.addAttribute("pageTitle", "Versão " + hash.substring(0, 8) + " — " + q.getTitulo());
         return "questao/versao";
     }
 
-    // Upload de imagem via AJAX
+    /**
+     * Exibe a tela de comparação entre duas versões.
+     * hashA = versão mais antiga (esquerda), hashB = versão mais nova (direita).
+     */
+    @GetMapping("/{id}/comparar")
+    public String comparar(
+            @PathVariable Long id,
+            @RequestParam(required = false) String hashA,
+            @RequestParam(required = false) String hashB,
+            Model model) {
+
+        Questao q = questaoService.buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+        List<GitService.VersaoQuestao> versoes = questaoService.listarVersoes(id);
+
+        model.addAttribute("questao", q);
+        model.addAttribute("versoes", versoes);
+        model.addAttribute("hashA", hashA);
+        model.addAttribute("hashB", hashB);
+
+        if (hashA != null && hashB != null && !hashA.isBlank() && !hashB.isBlank()) {
+            String conteudoA = questaoService.obterConteudoVersao(id, hashA);
+            String conteudoB = questaoService.obterConteudoVersao(id, hashB);
+            String diff = questaoService.gerarDiff(id, hashA, hashB);
+
+            model.addAttribute("conteudoA", conteudoA);
+            model.addAttribute("conteudoB", conteudoB);
+            model.addAttribute("htmlA", markdownService.renderizar(conteudoA));
+            model.addAttribute("htmlB", markdownService.renderizar(conteudoB));
+            model.addAttribute("diff", diff);
+
+            // Labels das versões selecionadas
+            versoes.stream().filter(v -> v.getHash().equals(hashA)).findFirst()
+                   .ifPresent(v -> model.addAttribute("labelA", v.getHashCurto() + " — " + v.getMensagem()));
+            versoes.stream().filter(v -> v.getHash().equals(hashB)).findFirst()
+                   .ifPresent(v -> model.addAttribute("labelB", v.getHashCurto() + " — " + v.getMensagem()));
+        }
+
+        model.addAttribute("pageTitle", "Comparar versões — " + q.getTitulo());
+        return "questao/comparar";
+    }
+
+    /**
+     * Abre o formulário de nova questão pré-preenchido com dados de uma versão.
+     * hash="current" usa a versão atual do banco.
+     */
+    @GetMapping("/{id}/nova-de-versao/{hash}")
+    public String novaDeVersao(@PathVariable Long id, @PathVariable String hash, Model model) {
+        try {
+            QuestaoForm form = questaoService.montarFormDeVersao(id, hash);
+            Questao q = questaoService.buscarPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+
+            model.addAttribute("form", form);
+            model.addAttribute("tiposQuestao", Questao.TipoQuestao.values());
+            model.addAttribute("dificuldades", Questao.Dificuldade.values());
+            model.addAttribute("disciplinas", questaoService.listarDisciplinas());
+            model.addAttribute("pageTitle", "Nova Questão (baseada em versão)");
+            model.addAttribute("isNova", true);
+            model.addAttribute("origemInfo", "Baseada na versão " +
+                    ("current".equals(hash) ? "atual" : hash.substring(0, 8)) +
+                    " da questão: " + q.getTitulo());
+            return "questao/form";
+        } catch (Exception e) {
+            return "redirect:/questoes/" + id;
+        }
+    }
+
+    // ── Upload / Preview ──────────────────────────────────────────────────────
+
     @PostMapping("/upload-imagem")
     @ResponseBody
     public ResponseEntity<Map<String, String>> uploadImagem(@RequestParam("file") MultipartFile file) {
@@ -178,7 +236,6 @@ public class QuestaoController {
         }
     }
 
-    // Preview markdown via AJAX
     @PostMapping("/preview-markdown")
     @ResponseBody
     public ResponseEntity<Map<String, String>> previewMarkdown(@RequestBody Map<String, String> body) {

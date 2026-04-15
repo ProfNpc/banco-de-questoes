@@ -30,12 +30,8 @@ public class QuestaoService {
         questao.setVersao(1);
         preencherQuestao(questao, form);
         questao = questaoRepository.save(questao);
-
-        // Salvar alternativas
         salvarAlternativas(questao, form);
         questao = questaoRepository.save(questao);
-
-        // Commit no Git
         String hash = gitService.commitQuestao(questao,
                 "Criação da questão #" + questao.getId() + ": " + questao.getTitulo());
         questao.setGitCommitHash(hash);
@@ -46,18 +42,13 @@ public class QuestaoService {
     public Questao atualizar(Long id, QuestaoForm form) {
         Questao questao = questaoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada: " + id));
-
         questao.setVersao(questao.getVersao() + 1);
         preencherQuestao(questao, form);
-
-        // Remove alternativas antigas e recria
         alternativaRepository.deleteByQuestaoId(id);
         questao.getAlternativas().clear();
         questao = questaoRepository.save(questao);
-
         salvarAlternativas(questao, form);
         questao = questaoRepository.save(questao);
-
         String hash = gitService.commitQuestao(questao,
                 "Atualização v" + questao.getVersao() + " da questão #" + questao.getId() + ": " + questao.getTitulo());
         questao.setGitCommitHash(hash);
@@ -70,6 +61,40 @@ public class QuestaoService {
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada: " + id));
         questao.setAtivo(false);
         questaoRepository.save(questao);
+    }
+
+    /**
+     * Monta um QuestaoForm pré-preenchido a partir do conteúdo Markdown
+     * de uma versão específica (ou da versão atual, com hash="current").
+     */
+    public QuestaoForm montarFormDeVersao(Long questaoId, String hash) {
+        if ("current".equals(hash)) {
+            // Usar dados atuais do banco
+            Questao q = questaoRepository.findById(questaoId)
+                    .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+            return questaoParaForm(q);
+        }
+
+        String conteudoMd = gitService.obterConteudoVersao(questaoId, hash);
+        if (conteudoMd == null) throw new RuntimeException("Versão não encontrada: " + hash);
+
+        GitService.QuestaoVersaoData data = gitService.parsearVersaoParaForm(conteudoMd);
+        QuestaoForm form = new QuestaoForm();
+        form.setTitulo(data.getTitulo() != null ? data.getTitulo() + " (cópia)" : "");
+        form.setEnunciado(data.getEnunciado());
+        form.setGabarito(data.getGabarito());
+        form.setDisciplina(data.getDisciplina());
+        form.setAssunto(data.getAssunto());
+
+        if (data.getTipo() != null) {
+            try { form.setTipo(Questao.TipoQuestao.valueOf(data.getTipo())); } catch (Exception ignored) {}
+        }
+        if (data.getDificuldade() != null) {
+            try { form.setDificuldade(Questao.Dificuldade.valueOf(data.getDificuldade())); } catch (Exception ignored) {}
+        }
+        form.setAlternativas(data.getAlternativas());
+        form.setAlternativasCorretas(data.getAlternativasCorretas());
+        return form;
     }
 
     public Optional<Questao> buscarPorId(Long id) {
@@ -98,6 +123,28 @@ public class QuestaoService {
         return gitService.obterConteudoVersao(id, hash);
     }
 
+    public String gerarDiff(Long id, String hashA, String hashB) {
+        return gitService.gerarDiff(id, hashA, hashB);
+    }
+
+    private QuestaoForm questaoParaForm(Questao q) {
+        QuestaoForm form = new QuestaoForm();
+        form.setTitulo(q.getTitulo() + " (cópia)");
+        form.setEnunciado(q.getEnunciado());
+        form.setTipo(q.getTipo());
+        form.setDisciplina(q.getDisciplina());
+        form.setAssunto(q.getAssunto());
+        form.setDificuldade(q.getDificuldade());
+        form.setGabarito(q.getGabarito());
+        for (var alt : q.getAlternativas()) {
+            form.getAlternativas().add(alt.getTexto());
+            if (Boolean.TRUE.equals(alt.getCorreta())) {
+                form.getAlternativasCorretas().add(alt.getOrdem());
+            }
+        }
+        return form;
+    }
+
     private void preencherQuestao(Questao questao, QuestaoForm form) {
         questao.setTitulo(form.getTitulo());
         questao.setEnunciado(form.getEnunciado());
@@ -112,14 +159,11 @@ public class QuestaoService {
         if (questao.getTipo() == Questao.TipoQuestao.OBJETIVA
                 && form.getAlternativas() != null
                 && !form.getAlternativas().isEmpty()) {
-
             List<Integer> corretas = form.getAlternativasCorretas() != null
                     ? form.getAlternativasCorretas() : List.of();
-
             for (int i = 0; i < form.getAlternativas().size(); i++) {
                 String texto = form.getAlternativas().get(i);
                 if (texto == null || texto.isBlank()) continue;
-
                 Alternativa alt = new Alternativa();
                 alt.setQuestao(questao);
                 alt.setOrdem(i);

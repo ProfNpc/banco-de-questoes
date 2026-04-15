@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Comparar Versões</h1>
+      <p th:text="'Questão: ' + ${questao.titulo}"></p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/questoes/{id}(id=${questao.id})}" class="btn btn-ghost">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </a>
+    </div>
+  </div>
+
+  <!-- Seletor de versões -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-code-branch" style="color:var(--accent)"></i> Selecionar versões para comparar</span>
+    </div>
+    <div class="card-body">
+      <form th:action="@{/questoes/{id}/comparar(id=${questao.id})}" method="get"
+            style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+        <div class="filter-group" style="flex:1;min-width:200px">
+          <label>Versão A (base / mais antiga)</label>
+          <select name="hashA" required>
+            <option value="">Selecione...</option>
+            <option th:each="v : ${versoes}"
+                    th:value="${v.hash}"
+                    th:selected="${v.hash == hashA}"
+                    th:text="${v.hashCurto + ' — ' + #temporals.format(v.data,'dd/MM/yy HH:mm') + ' — ' + v.mensagem}">
+            </option>
+          </select>
+        </div>
+        <div style="padding-bottom:10px;color:var(--muted);font-size:1.2rem">→</div>
+        <div class="filter-group" style="flex:1;min-width:200px">
+          <label>Versão B (nova / comparada)</label>
+          <select name="hashB" required>
+            <option value="">Selecione...</option>
+            <option th:each="v : ${versoes}"
+                    th:value="${v.hash}"
+                    th:selected="${v.hash == hashB}"
+                    th:text="${v.hashCurto + ' — ' + #temporals.format(v.data,'dd/MM/yy HH:mm') + ' — ' + v.mensagem}">
+            </option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-exchange-alt"></i> Comparar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Resultado da comparação -->
+  <div th:if="${conteudoA != null and conteudoB != null}">
+
+    <!-- Tabs de modo de visualização -->
+    <div class="tabs" style="margin-bottom:0">
+      <button class="tab-btn active" onclick="showMode('lado-a-lado', this)">
+        <i class="fas fa-columns"></i> Lado a lado
+      </button>
+      <button class="tab-btn" onclick="showMode('diff', this)">
+        <i class="fas fa-code"></i> Diff unificado
+      </button>
+      <button class="tab-btn" onclick="showMode('inline', this)">
+        <i class="fas fa-align-left"></i> Inline
+      </button>
+    </div>
+
+    <!-- Modo: Lado a lado -->
+    <div id="mode-lado-a-lado" class="mode-pane">
+      <div class="compare-grid">
+        <div class="compare-col">
+          <div class="compare-header compare-header-a">
+            <i class="fas fa-history"></i>
+            <span>Versão A</span>
+            <span class="text-mono" style="font-size:.75rem;opacity:.8" th:text="${labelA}"></span>
+          </div>
+          <div class="card-body markdown-body compare-body" th:utext="${htmlA}"></div>
+        </div>
+        <div class="compare-col">
+          <div class="compare-header compare-header-b">
+            <i class="fas fa-star"></i>
+            <span>Versão B</span>
+            <span class="text-mono" style="font-size:.75rem;opacity:.8" th:text="${labelB}"></span>
+          </div>
+          <div class="card-body markdown-body compare-body" th:utext="${htmlB}"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modo: Diff unificado -->
+    <div id="mode-diff" class="mode-pane" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Diff Unificado (formato Git)</span>
+          <div style="display:flex;gap:8px">
+            <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700">+ adições</span>
+            <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700">- remoções</span>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <div id="diffContent" class="diff-viewer">
+            <div th:if="${diff == null or diff.isBlank()}"
+                 style="padding:24px;text-align:center;color:var(--muted)">
+              <i class="fas fa-equals" style="font-size:2rem;margin-bottom:8px;display:block"></i>
+              As versões são idênticas — nenhuma diferença encontrada.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modo: Inline (ambos os markdowns brutos) -->
+    <div id="mode-inline" class="mode-pane" style="display:none">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header compare-header-a" style="border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+            <span class="card-title" style="color:white">Versão A — Markdown bruto</span>
+            <span class="text-mono" style="font-size:.75rem;color:rgba(255,255,255,.7)" th:text="${labelA}"></span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <pre class="diff-source" th:text="${conteudoA}"></pre>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header compare-header-b" style="border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+            <span class="card-title" style="color:white">Versão B — Markdown bruto</span>
+            <span class="text-mono" style="font-size:.75rem;color:rgba(255,255,255,.7)" th:text="${labelB}"></span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <pre class="diff-source" th:text="${conteudoB}"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ações nas versões comparadas -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-header">
+        <span class="card-title">Ações com estas versões</span>
+      </div>
+      <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap">
+        <a th:href="@{/questoes/{id}/versoes/{hash}(id=${questao.id},hash=${hashA})}"
+           class="btn btn-ghost">
+          <i class="fas fa-eye"></i> Ver versão A completa
+        </a>
+        <a th:href="@{/questoes/{id}/versoes/{hash}(id=${questao.id},hash=${hashB})}"
+           class="btn btn-ghost">
+          <i class="fas fa-eye"></i> Ver versão B completa
+        </a>
+        <a th:href="@{/questoes/{id}/nova-de-versao/{hash}(id=${questao.id},hash=${hashA})}"
+           class="btn btn-secondary">
+          <i class="fas fa-copy"></i> Criar questão da versão A
+        </a>
+        <a th:href="@{/questoes/{id}/nova-de-versao/{hash}(id=${questao.id},hash=${hashB})}"
+           class="btn btn-secondary">
+          <i class="fas fa-copy"></i> Criar questão da versão B
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado inicial (nenhuma versão selecionada) -->
+  <div th:if="${conteudoA == null}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-exchange-alt"></i></div>
+    <h3>Selecione duas versões para comparar</h3>
+    <p>Escolha a Versão A (base) e a Versão B (nova) no painel acima.</p>
+  </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script th:inline="javascript">
+const rawDiff = /*[[${diff}]]*/ '';
+
+function showMode(name, btn) {
+  document.querySelectorAll('.mode-pane').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-' + name).style.display = 'block';
+  btn.classList.add('active');
+}
+
+// Renderizar diff colorido
+function renderDiff(raw) {
+  if (!raw || raw.trim() === '') return;
+  const container = document.getElementById('diffContent');
+  if (!container) return;
+  const lines = raw.split('\n');
+  const html = lines.map(line => {
+    const esc = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (line.startsWith('+++') || line.startsWith('---')) {
+      return `<div class="diff-file">${esc}</div>`;
+    } else if (line.startsWith('+')) {
+      return `<div class="diff-add">${esc}</div>`;
+    } else if (line.startsWith('-')) {
+      return `<div class="diff-del">${esc}</div>`;
+    } else if (line.startsWith('@@')) {
+      return `<div class="diff-hunk">${esc}</div>`;
+    } else {
+      return `<div class="diff-ctx">${esc}</div>`;
+    }
+  }).join('');
+  container.innerHTML = html || container.innerHTML;
+}
+
+document.addEventListener('DOMContentLoaded', () => { renderDiff(rawDiff); });
+</script>
+</th:block>
+</body>
+</html>

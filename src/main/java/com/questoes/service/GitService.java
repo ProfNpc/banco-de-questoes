@@ -4,18 +4,25 @@ import com.questoes.entity.Questao;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.AbstractTreeIterator;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -104,9 +111,7 @@ public class GitService {
         try {
             Repository repo = git.getRepository();
             ObjectId commitId = repo.resolve(commitHash);
-            if (commitId == null) {
-            	return null;
-            }
+            if (commitId == null) return null;
             RevCommit commit;
             try (RevWalk rw = new RevWalk(repo)) {
                 commit = rw.parseCommit(commitId);
@@ -124,6 +129,135 @@ public class GitService {
             log.error("Erro ao obter versão {} da questão {}", commitHash, questaoId, e);
         }
         return null;
+    }
+
+    /**
+     * Gera um diff unificado entre duas versões (hashA = mais antiga, hashB = mais nova).
+     * Retorna o diff como texto com marcações +/--.
+     */
+    public String gerarDiff(Long questaoId, String hashA, String hashB) {
+        String fileName = "questao-" + questaoId + ".md";
+        try {
+            Repository repo = git.getRepository();
+            AbstractTreeIterator treeA = prepararTree(repo, hashA);
+            AbstractTreeIterator treeB = prepararTree(repo, hashB);
+            if (treeA == null || treeB == null) return null;
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (DiffFormatter df = new DiffFormatter(out)) {
+                df.setRepository(repo);
+                df.setDiffComparator(RawTextComparator.DEFAULT);
+                df.setPathFilter(PathFilter.create(fileName));
+                df.setContext(3);
+
+                List<DiffEntry> entries = df.scan(treeA, treeB);
+                df.format(entries);
+                df.flush();
+            }
+            return out.toString(StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Erro ao gerar diff da questão {}", questaoId, e);
+            return null;
+        }
+    }
+
+    private AbstractTreeIterator prepararTree(Repository repo, String commitHash) {
+        try {
+            ObjectId id = repo.resolve(commitHash + "^{tree}");
+            if (id == null) return null;
+            CanonicalTreeParser parser = new CanonicalTreeParser();
+            try (ObjectReader reader = repo.newObjectReader()) {
+                parser.reset(reader, id);
+            }
+            return parser;
+        } catch (Exception e) {
+            log.error("Erro ao preparar tree para {}", commitHash, e);
+            return null;
+        }
+    }
+
+    /**
+     * Parseia o conteúdo Markdown de uma versão e extrai os campos estruturados
+     * para pré-preencher o formulário de criação de nova questão.
+     */
+    public QuestaoVersaoData parsearVersaoParaForm(String conteudoMd) {
+        if (conteudoMd == null || conteudoMd.isBlank()) return new QuestaoVersaoData();
+
+        QuestaoVersaoData data = new QuestaoVersaoData();
+        String[] linhas = conteudoMd.split("\n");
+
+        // Título: primeira linha # Título
+        for (String linha : linhas) {
+            if (linha.startsWith("# ")) {
+                data.setTitulo(linha.substring(2).trim());
+                break;
+            }
+        }
+
+        // Metadados: **Campo:** valor
+        for (String linha : linhas) {
+            String l = linha.trim();
+            if (l.startsWith("**Tipo:**")) {
+                String val = extrairValorMeta(l);
+                if (val.contains("Objetiva")) data.setTipo("OBJETIVA");
+                else if (val.contains("Discursiva")) data.setTipo("DISCURSIVA");
+            } else if (l.startsWith("**Disciplina:**")) {
+                data.setDisciplina(extrairValorMeta(l));
+            } else if (l.startsWith("**Assunto:**")) {
+                data.setAssunto(extrairValorMeta(l));
+            } else if (l.startsWith("**Dificuldade:**")) {
+                String val = extrairValorMeta(l);
+                if (val.contains("Fácil"))   data.setDificuldade("FACIL");
+                else if (val.contains("Médio")) data.setDificuldade("MEDIO");
+                else if (val.contains("Difícil")) data.setDificuldade("DIFICIL");
+            }
+        }
+
+        // Enunciado: entre "## Enunciado" e a próxima seção "## "
+        data.setEnunciado(extrairSecao(conteudoMd, "## Enunciado", "## "));
+
+        // Gabarito
+        data.setGabarito(extrairSecao(conteudoMd, "## Gabarito", "## "));
+
+        // Alternativas: linhas "A) texto" ou "A) texto ✓"
+        if ("OBJETIVA".equals(data.getTipo())) {
+            String secaoAlt = extrairSecao(conteudoMd, "## Alternativas", "## ");
+            if (secaoAlt != null) {
+                for (String linha : secaoAlt.split("\n")) {
+                    String l = linha.trim();
+                    // Padrão: "A) texto" ou "A) texto ✓"
+                    if (l.length() >= 3 && l.charAt(1) == ')') {
+                        boolean correta = l.endsWith("✓");
+                        String texto = l.substring(2).trim();
+                        if (correta) texto = texto.substring(0, texto.length() - 1).trim();
+                        data.getAlternativas().add(texto);
+                        if (correta) data.getAlternativasCorretas().add(data.getAlternativas().size() - 1);
+                    }
+                }
+            }
+        }
+
+        return data;
+    }
+
+    private String extrairValorMeta(String linha) {
+        int idx = linha.indexOf(":**");
+        if (idx < 0) return "";
+        String resto = linha.substring(idx + 3).trim();
+        // Remove marcadores residuais de negrito
+        return resto.replace("**", "").trim();
+    }
+
+    private String extrairSecao(String conteudo, String marcadorInicio, String prefixoFim) {
+        int inicio = conteudo.indexOf(marcadorInicio);
+        if (inicio < 0) return null;
+        inicio += marcadorInicio.length();
+        // Pular o próprio "## Enunciado" e achar o próximo bloco
+        int proxSecao = conteudo.indexOf("\n" + prefixoFim, inicio);
+        String secao = proxSecao > 0
+                ? conteudo.substring(inicio, proxSecao)
+                : conteudo.substring(inicio);
+        return secao.strip();
     }
 
     private String buildMarkdownContent(Questao questao) {
@@ -149,6 +283,8 @@ public class GitService {
         return sb.toString();
     }
 
+    // ── DTOs internos ──────────────────────────────────────────────────────
+
     public static class VersaoQuestao {
         private String hash, hashCurto, mensagem, autor;
         private LocalDateTime data;
@@ -162,5 +298,30 @@ public class GitService {
         public void setData(LocalDateTime d) { this.data = d; }
         public String getAutor() { return autor; }
         public void setAutor(String a) { this.autor = a; }
+    }
+
+    public static class QuestaoVersaoData {
+        private String titulo, tipo, disciplina, assunto, dificuldade, enunciado, gabarito;
+        private List<String> alternativas = new ArrayList<>();
+        private List<Integer> alternativasCorretas = new ArrayList<>();
+
+        public String getTitulo() { return titulo; }
+        public void setTitulo(String t) { this.titulo = t; }
+        public String getTipo() { return tipo; }
+        public void setTipo(String t) { this.tipo = t; }
+        public String getDisciplina() { return disciplina; }
+        public void setDisciplina(String d) { this.disciplina = d; }
+        public String getAssunto() { return assunto; }
+        public void setAssunto(String a) { this.assunto = a; }
+        public String getDificuldade() { return dificuldade; }
+        public void setDificuldade(String d) { this.dificuldade = d; }
+        public String getEnunciado() { return enunciado; }
+        public void setEnunciado(String e) { this.enunciado = e; }
+        public String getGabarito() { return gabarito; }
+        public void setGabarito(String g) { this.gabarito = g; }
+        public List<String> getAlternativas() { return alternativas; }
+        public void setAlternativas(List<String> a) { this.alternativas = a; }
+        public List<Integer> getAlternativasCorretas() { return alternativasCorretas; }
+        public void setAlternativasCorretas(List<Integer> a) { this.alternativasCorretas = a; }
     }
 }
