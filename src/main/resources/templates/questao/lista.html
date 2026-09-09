@@ -71,6 +71,7 @@
               th:class="'badge badge-' + ${#strings.toLowerCase(q.dificuldade.name())}"
               th:text="${q.dificuldade.descricao}"></span>
         <span th:if="${q.disciplina != null}" class="badge badge-neutral" th:text="${q.disciplina}"></span>
+        <span class="badge badge-version" style="background:var(--ink-3);color:#aaaacc" th:text="'#' + ${q.id}"></span>
         <span class="badge badge-version" th:text="'v' + ${q.versao}"></span>
       </div>
 

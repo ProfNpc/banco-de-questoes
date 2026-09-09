@@ -665,3 +665,11 @@ body {
   margin: 0;
   border-radius: 0;
 }
+
+/* ═══════════════════════════════════════
+   PORTAL DO ALUNO / APLICAÇÃO DE PROVA
+═══════════════════════════════════════ */
+
+.alt-opcao { display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border:2px solid var(--line);border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:all .15s; }
+.alt-opcao:hover { border-color:var(--accent);background:var(--accent-light); }
+.alt-opcao.selecionada { border-color:var(--accent);background:var(--accent-light); }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Importar Alunos em Lote</h1>
+      <p>Cole o texto com um aluno por linha no formato indicado</p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/alunos}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Texto de importação</span></div>
+      <div class="card-body">
+        <form th:action="@{/alunos/importar}" method="post">
+          <div class="form-group" style="margin-bottom:16px">
+            <label>Um aluno por linha — formato: <code>nome/email/senha;</code></label>
+            <textarea name="texto" rows="14" required
+              style="width:100%;padding:10px;font-family:var(--font-mono);font-size:.85rem;border:1.5px solid var(--line);border-radius:var(--radius)"
+              placeholder="João da Silva/joao@escola.edu.br/Xk3mP;&#10;Maria Souza/maria@escola.edu.br/Ab9Qr;&#10;Pedro Lima/pedro@escola.edu.br/Zw7Lp;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">
+            <i class="fas fa-file-import"></i> Importar Alunos
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Instruções</span></div>
+      <div class="card-body" style="font-size:.875rem;line-height:1.8;color:var(--slate)">
+        <p><strong>Formato de cada linha:</strong></p>
+        <code style="display:block;background:var(--bg-2);padding:12px;border-radius:6px;margin:8px 0;font-size:.85rem">nome/email/senha;</code>
+        <p style="margin-top:16px"><strong>Campos:</strong></p>
+        <ul style="padding-left:18px">
+          <li><strong>nome</strong> — nome completo do aluno</li>
+          <li><strong>email</strong> — e-mail único, usado como login</li>
+          <li><strong>senha</strong> — senha inicial (recomendado: 5 caracteres aleatórios)</li>
+        </ul>
+        <div class="alert" style="background:var(--warning-light);color:#92400e;margin-top:16px">
+          <i class="fas fa-lightbulb"></i>
+          O aluno deverá <strong>trocar a senha</strong> no primeiro acesso ao Portal do Aluno em <code>/prova/fazer</code>.
+        </div>
+        <p style="margin-top:12px">E-mails já cadastrados serão ignorados com aviso de erro.</p>
+        <p>O ponto e vírgula ao final de cada linha é opcional.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

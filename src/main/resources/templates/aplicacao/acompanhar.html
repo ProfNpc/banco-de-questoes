@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="${pageTitle}">Painel Professor</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body style="background:var(--bg-2)">
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><span class="brand-icon">◈</span><span class="brand-text">QuestionBase</span></a>
+    <div style="flex:1"></div>
+    <span style="color:var(--slate);font-size:.875rem"><i class="fas fa-chalkboard-teacher"></i> <span th:text="${professorNome}"></span></span>
+    <a th:href="@{/prova/logout}" class="btn btn-ghost btn-sm" style="margin-left:16px"><i class="fas fa-sign-out-alt"></i> Sair</a>
+  </div>
+</nav>
+<main style="max-width:900px;margin:0 auto;padding:32px 24px">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Painel do Professor</h1>
+      <p>Selecione uma prova para acompanhar</p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/}" class="btn btn-secondary"><i class="fas fa-cog"></i> Ir para o sistema</a>
+    </div>
+  </div>
+
+  <div th:if="${provas.isEmpty()}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
+    <h3>Nenhuma prova criada</h3>
+    <a th:href="@{/provas/nova}" class="btn btn-primary" style="margin-top:16px">Criar primeira prova</a>
+  </div>
+
+  <div class="questao-grid">
+    <div th:each="p : ${provas}" class="prova-card">
+      <h3 class="prova-titulo" th:text="${p.titulo}"></h3>
+      <div class="questao-card-meta">
+        <span th:if="${p.disciplina}" class="badge badge-neutral" th:text="${p.disciplina}"></span>
+        <span class="badge badge-neutral" th:text="${p.provaQuestoes.size()} + ' questão(ões)'"></span>
+      </div>
+      <div style="margin-top:14px">
+        <a th:href="@{/prova/acompanhar/{id}(id=${p.id})}" class="btn btn-primary" style="width:100%;justify-content:center">
+          <i class="fas fa-chart-line"></i> Acompanhar
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

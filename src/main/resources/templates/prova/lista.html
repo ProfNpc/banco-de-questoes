@@ -26,7 +26,10 @@
 
   <div class="questao-grid fade-in">
     <div th:each="prova : ${provas}" class="prova-card">
-      <h3 class="prova-titulo" th:text="${prova.titulo}">Título</h3>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+        <h3 class="prova-titulo" th:text="${prova.titulo}" style="margin-bottom:0">Título</h3>
+        <span class="badge badge-version" th:text="'#' + ${prova.id}"></span>
+      </div>
       <div class="questao-card-meta">
         <span th:if="${prova.disciplina != null}" class="badge badge-neutral" th:text="${prova.disciplina}"></span>
         <span class="badge badge-neutral"

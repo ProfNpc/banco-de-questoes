@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Turmas</h1>
+      <p th:text="${turmas.totalElements} + ' turma(s) encontrada(s)'"></p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/turmas/nova}" class="btn btn-primary"><i class="fas fa-plus"></i> Nova Turma</a>
+    </div>
+  </div>
+
+  <form method="get" th:action="@{/turmas}" class="filters-bar">
+    <div class="filter-group grow">
+      <label>Buscar por nome ou descrição</label>
+      <input type="text" name="busca" th:value="${busca}" placeholder="Digite para filtrar..."/>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+      <a th:href="@{/turmas}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+    </div>
+  </form>
+
+  <div th:if="${turmas.isEmpty()}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-users"></i></div>
+    <h3>Nenhuma turma encontrada</h3>
+    <a th:href="@{/turmas/nova}" class="btn btn-primary" style="margin-top:16px">Criar primeira turma</a>
+  </div>
+
+  <div class="questao-grid" th:unless="${turmas.isEmpty()}">
+    <div th:each="t : ${turmas.content}" class="prova-card">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+        <h3 class="prova-titulo" th:text="${t.nome}" style="margin-bottom:0"></h3>
+        <span class="badge badge-version" th:text="'#' + ${t.id}"></span>
+      </div>
+      <p th:if="${t.descricao}" class="text-muted" style="font-size:.82rem;margin:8px 0" th:text="${t.descricao}"></p>
+      <div class="questao-card-meta" style="margin-top:8px">
+        <span class="badge badge-neutral" th:text="${t.alunos.size()} + ' aluno(s)'"></span>
+      </div>
+      <div class="questao-card-footer">
+        <span class="text-muted" style="font-size:.75rem"
+              th:text="${#temporals.format(t.criadoEm,'dd/MM/yyyy')}"></span>
+        <div style="display:flex;gap:6px">
+          <a th:href="@{/turmas/{id}(id=${t.id})}" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i> Abrir</a>
+          <a th:href="@{/turmas/{id}/editar(id=${t.id})}" class="btn btn-sm btn-ghost"><i class="fas fa-pen"></i></a>
+          <form th:action="@{/turmas/{id}/excluir(id=${t.id})}" method="post"
+                onsubmit="return confirm('Excluir esta turma?')">
+            <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div th:if="${turmas.totalPages > 1}" class="pagination">
+    <div class="page-item" th:classappend="${turmas.first} ? 'disabled'">
+      <a th:href="@{/turmas(page=${turmas.number-1},busca=${busca})}">&laquo;</a>
+    </div>
+    <div th:each="i : ${#numbers.sequence(0,turmas.totalPages-1)}"
+         class="page-item" th:classappend="${i==turmas.number} ? 'active'">
+      <a th:if="${i!=turmas.number}" th:href="@{/turmas(page=${i},busca=${busca})}" th:text="${i+1}"></a>
+      <span th:if="${i==turmas.number}" th:text="${i+1}"></span>
+    </div>
+    <div class="page-item" th:classappend="${turmas.last} ? 'disabled'">
+      <a th:href="@{/turmas(page=${turmas.number+1},busca=${busca})}">&raquo;</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

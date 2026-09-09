@@ -9,13 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-    <!-- EasyMDE para editor Markdown -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css"/>
     <link rel="stylesheet" th:href="@{/css/app.css}"/>
 </head>
 <body>
-
-	
 <nav class="navbar">
     <div class="nav-inner">
         <a href="/" class="nav-brand">
@@ -26,17 +23,41 @@
             <a th:href="@{/}" th:classappend="${#strings.equals(pageTitle,'Dashboard')} ? 'active'">
                 <i class="fas fa-home"></i> Dashboard
             </a>
-            <a th:href="@{/questoes}" th:classappend="${#strings.startsWith(pageTitle,'Banco') or #strings.startsWith(pageTitle,'Quest')} ? 'active'">
+            <a th:href="@{/questoes}"
+               th:classappend="${#strings.startsWith(pageTitle,'Banco') or #strings.startsWith(pageTitle,'Quest') or #strings.startsWith(pageTitle,'Nova Questão') or #strings.startsWith(pageTitle,'Editar Questão') or #strings.startsWith(pageTitle,'Comparar') or #strings.startsWith(pageTitle,'Versão')} ? 'active'">
                 <i class="fas fa-question-circle"></i> Questões
             </a>
-            <a th:href="@{/provas}" th:classappend="${#strings.startsWith(pageTitle,'Prova') or #strings.startsWith(pageTitle,'Minha')} ? 'active'">
+            <a th:href="@{/provas}"
+               th:classappend="${#strings.startsWith(pageTitle,'Prova') or #strings.startsWith(pageTitle,'Nova Prova') or #strings.startsWith(pageTitle,'Editar Prova')} ? 'active'">
                 <i class="fas fa-file-alt"></i> Provas
+            </a>
+            <a th:href="@{/alunos}"
+               th:classappend="${#strings.startsWith(pageTitle,'Aluno') or #strings.startsWith(pageTitle,'Novo Aluno') or #strings.startsWith(pageTitle,'Editar Aluno') or #strings.startsWith(pageTitle,'Importar')} ? 'active'">
+                <i class="fas fa-user-graduate"></i> Alunos
+            </a>
+            <a th:href="@{/turmas}"
+               th:classappend="${#strings.startsWith(pageTitle,'Turma')} ? 'active'">
+                <i class="fas fa-users"></i> Turmas
             </a>
         </div>
         <div class="nav-actions">
-            <a th:href="@{/questoes/nova}" class="btn-nav-primary">
-                <i class="fas fa-plus"></i> Nova Questão
+            <a th:href="@{/prova/fazer}" class="btn-nav-primary" style="background:var(--success)">
+                <i class="fas fa-play-circle"></i> Portal do Aluno
             </a>
+            <!-- Usuário logado + logout -->
+            <div style="display:flex;align-items:center;gap:8px;margin-left:8px;
+                        padding:5px 12px;border-radius:var(--radius);background:var(--bg-2);
+                        border:1px solid var(--line)">
+                <i class="fas fa-chalkboard-teacher" style="color:var(--accent);font-size:.85rem"></i>
+                <span th:text="${session?.professorAdminNome}"
+                      style="font-size:.8rem;font-weight:600;color:var(--ink);max-width:120px;
+                             overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Professor</span>
+                <a th:href="@{/admin/logout}" title="Sair do painel"
+                   style="color:var(--muted);font-size:.8rem;text-decoration:none;transition:color .15s"
+                   onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
         </div>
     </div>
 </nav>
@@ -52,6 +73,16 @@
         <span th:text="${erro}"></span>
         <button class="alert-close" onclick="this.parentElement.remove()">×</button>
     </div>
+    <div th:if="${avisos}" class="alert" style="background:var(--warning-light);color:#92400e">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+            <strong>Avisos:</strong>
+            <ul style="margin:4px 0 0 16px">
+                <li th:each="av : ${avisos}" th:text="${av}"></li>
+            </ul>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+    </div>
 
     <div layout:fragment="content"></div>
 </main>
@@ -62,10 +93,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-
 <th:block layout:fragment="scripts"></th:block>
-
-
-
 </body>
 </html>

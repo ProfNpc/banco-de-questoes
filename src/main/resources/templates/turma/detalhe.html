@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 th:text="${turma.nome}">Turma</h1>
+      <div class="gap-8" style="margin-top:6px">
+        <span class="badge badge-version" th:text="'#' + ${turma.id}"></span>
+        <span th:if="${turma.descricao}" th:text="${turma.descricao}"
+              style="color:var(--muted);font-size:.875rem"></span>
+      </div>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/turmas}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Voltar</a>
+      <a th:href="@{/turmas/{id}/editar(id=${turma.id})}" class="btn btn-secondary"><i class="fas fa-pen"></i> Editar</a>
+      <button class="btn btn-primary" id="btnAplicarProva" onclick="abrirModalProva()" disabled>
+        <i class="fas fa-paper-plane"></i> Aplicar Prova aos Selecionados
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-layout">
+
+    <!-- Lista de alunos da turma -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">
+            <i class="fas fa-users" style="color:var(--accent)"></i>
+            Alunos da Turma
+            <span class="badge badge-neutral" th:text="${turma.alunos.size()} + ' aluno(s)'" style="margin-left:6px"></span>
+          </span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-ghost" onclick="selecionarTodos()">Selecionar todos</button>
+            <button class="btn btn-sm btn-ghost" onclick="desselecionarTodos()">Limpar</button>
+          </div>
+        </div>
+
+        <div th:if="${turma.alunos.isEmpty()}" style="padding:32px;text-align:center;color:var(--muted)">
+          <i class="fas fa-user-plus" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px"></i>
+          Nenhum aluno nesta turma ainda. Use o painel ao lado para adicionar alunos.
+        </div>
+
+        <div th:unless="${turma.alunos.isEmpty()}">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--bg-2);border-bottom:1px solid var(--line)">
+                <th style="padding:10px 16px;width:36px"><input type="checkbox" id="checkAll" onchange="toggleTodos(this)"/></th>
+                <th style="padding:10px 12px;text-align:left;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;width:56px">ID</th>
+                <th style="padding:10px 12px;text-align:left;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase">Nome</th>
+                <th style="padding:10px 12px;text-align:left;font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase">E-mail</th>
+                <th style="padding:10px 12px;text-align:right;width:60px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="a : ${turma.alunos}" style="border-bottom:1px solid var(--line)">
+                <td style="padding:10px 16px">
+                  <input type="checkbox" class="aluno-check picker-check"
+                         th:value="${a.id}" onchange="atualizarBotao()"/>
+                </td>
+                <td style="padding:10px 12px">
+                  <span class="text-mono" style="font-size:.8rem;color:var(--muted)" th:text="${a.id}"></span>
+                </td>
+                <td style="padding:10px 12px;font-weight:500" th:text="${a.nome}"></td>
+                <td style="padding:10px 12px;color:var(--slate);font-size:.875rem" th:text="${a.email}"></td>
+                <td style="padding:10px 12px;text-align:right">
+                  <form th:action="@{/turmas/{tid}/alunos/remover(tid=${turma.id})}" method="post"
+                        onsubmit="return confirm('Remover este aluno da turma?')">
+                    <input type="hidden" name="alunoId" th:value="${a.id}"/>
+                    <button type="submit" class="btn btn-sm btn-danger" title="Remover da turma">
+                      <i class="fas fa-user-minus"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- Painel de busca e adição de alunos -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-user-plus" style="color:var(--accent)"></i> Adicionar Alunos</span>
+        </div>
+        <div class="card-body" style="padding-bottom:12px">
+
+          <!-- Campo de busca -->
+          <div style="position:relative;margin-bottom:10px">
+            <input type="text" id="buscaAluno"
+                   placeholder="Nome, e-mail ou ID do aluno..."
+                   oninput="buscarAlunos()"
+                   style="width:100%;padding:10px 36px 10px 12px;border:1.5px solid var(--line);
+                          border-radius:var(--radius);font-size:.875rem;font-family:var(--font-sans);
+                          box-sizing:border-box;transition:border-color .15s;background:var(--bg)"/>
+            <i class="fas fa-search" style="position:absolute;right:12px;top:50%;
+               transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:.85rem"></i>
+          </div>
+
+          <!-- Resultados da busca -->
+          <div id="resultadoBusca"
+               style="max-height:260px;overflow-y:auto;border:1.5px solid var(--line);
+                      border-radius:var(--radius);background:var(--white);display:none;margin-bottom:10px">
+            <div id="buscandoMsg" style="padding:12px 14px;font-size:.85rem;color:var(--muted);display:none">
+              <i class="fas fa-spinner fa-spin"></i> Buscando...
+            </div>
+            <div id="semResultados" style="padding:20px 14px;font-size:.85rem;color:var(--muted);
+                 text-align:center;display:none">
+              <i class="fas fa-user-slash" style="display:block;font-size:1.5rem;opacity:.3;margin-bottom:6px"></i>
+              Nenhum aluno encontrado ou todos já estão na turma.
+            </div>
+            <div id="listaResultados"></div>
+          </div>
+
+          <!-- Chips dos selecionados para adicionar -->
+          <div id="selecionadosParaAdicionar" style="display:none;margin-bottom:10px">
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                        color:var(--muted);margin-bottom:6px">Selecionados para adicionar</div>
+            <div id="chipsSelecionados" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+          </div>
+
+          <!-- Formulário oculto + botão confirmar -->
+          <form th:action="@{/turmas/{id}/alunos/adicionar-multiplos(id=${turma.id})}"
+                method="post" id="formAdicionarMultiplos">
+            <div id="hiddenAlunosAdd"></div>
+            <button type="button" id="btnConfirmarAdd" class="btn btn-primary"
+                    style="width:100%;display:none;justify-content:center" onclick="confirmarAdicao()">
+              <i class="fas fa-plus"></i>
+              <span id="btnAddTexto">Adicionar Selecionados</span>
+            </button>
+          </form>
+
+          <p class="form-hint" style="margin-top:8px">
+            <i class="fas fa-info-circle"></i>
+            Digite para buscar, clique para selecionar, depois clique em Adicionar.
+          </p>
+        </div>
+      </div>
+
+      <!-- Ações rápidas -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Ações</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+          <a th:href="@{/alunos/importar}" class="btn btn-ghost" style="justify-content:center">
+            <i class="fas fa-file-import"></i> Importar novos alunos
+          </a>
+          <form th:action="@{/turmas/{id}/excluir(id=${turma.id})}" method="post"
+                onsubmit="return confirm('Excluir esta turma? Os alunos não serão excluídos.')">
+            <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center">
+              <i class="fas fa-trash"></i> Excluir Turma
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Aplicar Prova -->
+  <div id="modalProva" class="modal-overlay">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-header">
+        <span class="modal-title"><i class="fas fa-paper-plane" style="color:var(--accent)"></i> Aplicar Prova</span>
+        <button class="modal-close" onclick="fecharModalProva()">×</button>
+      </div>
+      <form th:action="@{/turmas/{id}/aplicar-prova(id=${turma.id})}" method="post" id="formAplicar">
+        <div id="alunosSelecionadosHidden"></div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Prova *</label>
+          <select name="provaId" required style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:var(--radius)">
+            <option value="">Selecione uma prova...</option>
+            <option th:each="p : ${provas}" th:value="${p.id}"
+                    th:text="'#' + ${p.id} + ' — ' + ${p.titulo}"></option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label>Data/Hora de Início *</label>
+          <input type="datetime-local" name="inicioPrevisto" required
+                 style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:var(--radius)"/>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Duração (minutos) *</label>
+          <input type="number" name="duracaoMinutos" required min="5" max="480" value="60"
+                 style="width:100%;padding:10px;border:1.5px solid var(--line);border-radius:var(--radius)"/>
+        </div>
+        <p id="infoSelecionados" class="text-muted" style="font-size:.85rem;margin-bottom:16px"></p>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" class="btn btn-ghost" onclick="fecharModalProva()">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Aplicar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+<script th:inline="javascript">
+const TURMA_ID = /*[[${turma.id}]]*/ 0;
+
+// ── Seleção para aplicar prova ────────────────────────────────────────────────
+const selecionados = new Set();
+
+function toggleTodos(cb) {
+  document.querySelectorAll('.aluno-check').forEach(c => {
+    c.checked = cb.checked;
+    cb.checked ? selecionados.add(c.value) : selecionados.delete(c.value);
+  });
+  atualizarBotao();
+}
+function selecionarTodos() {
+  document.querySelectorAll('.aluno-check').forEach(c => { c.checked = true; selecionados.add(c.value); });
+  atualizarBotao();
+}
+function desselecionarTodos() {
+  document.querySelectorAll('.aluno-check').forEach(c => c.checked = false);
+  selecionados.clear();
+  atualizarBotao();
+  const ca = document.getElementById('checkAll');
+  if (ca) ca.checked = false;
+}
+function atualizarBotao() {
+  document.querySelectorAll('.aluno-check').forEach(c =>
+    c.checked ? selecionados.add(c.value) : selecionados.delete(c.value));
+  const btn = document.getElementById('btnAplicarProva');
+  btn.disabled = selecionados.size === 0;
+  btn.innerHTML = selecionados.size > 0
+    ? `<i class="fas fa-paper-plane"></i> Aplicar Prova aos ${selecionados.size} Selecionado(s)`
+    : '<i class="fas fa-paper-plane"></i> Aplicar Prova aos Selecionados';
+}
+function abrirModalProva() {
+  if (selecionados.size === 0) return;
+  const div = document.getElementById('alunosSelecionadosHidden');
+  div.innerHTML = '';
+  selecionados.forEach(id => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'alunoIds'; inp.value = id;
+    div.appendChild(inp);
+  });
+  document.getElementById('infoSelecionados').textContent =
+    `Será aplicada para ${selecionados.size} aluno(s) selecionado(s).`;
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.querySelector('input[name="inicioPrevisto"]').value = now.toISOString().slice(0, 16);
+  document.getElementById('modalProva').classList.add('open');
+}
+function fecharModalProva() { document.getElementById('modalProva').classList.remove('open'); }
+document.getElementById('modalProva').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalProva')) fecharModalProva();
+});
+
+// ── Busca e adição de alunos ──────────────────────────────────────────────────
+const alunosParaAdicionar = new Map(); // sid → {id, nome, email}
+let debounceTimer = null;
+
+function buscarAlunos() {
+  const q = document.getElementById('buscaAluno').value;
+  clearTimeout(debounceTimer);
+
+  const painel    = document.getElementById('resultadoBusca');
+  const carregando = document.getElementById('buscandoMsg');
+  const semRes    = document.getElementById('semResultados');
+  const lista     = document.getElementById('listaResultados');
+
+  if (q.trim().length === 0) { painel.style.display = 'none'; return; }
+
+  painel.style.display    = 'block';
+  carregando.style.display = 'block';
+  semRes.style.display    = 'none';
+  lista.innerHTML          = '';
+
+  debounceTimer = setTimeout(() => {
+    fetch(`/turmas/${TURMA_ID}/alunos/buscar?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(alunos => {
+        carregando.style.display = 'none';
+        lista.innerHTML = '';
+        if (alunos.length === 0) { semRes.style.display = 'block'; return; }
+        semRes.style.display = 'none';
+
+        alunos.forEach(a => {
+          const sid = String(a.id);
+          const marcado = alunosParaAdicionar.has(sid);
+          const row = document.createElement('div');
+          row.dataset.id = sid;
+          row.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 14px;
+            border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s;
+            ${marcado ? 'background:var(--accent-light)' : ''}`;
+          row.onmouseover = () => { if (!alunosParaAdicionar.has(sid)) row.style.background = 'var(--bg-2)'; };
+          row.onmouseout  = () => { if (!alunosParaAdicionar.has(sid)) row.style.background = ''; };
+          row.innerHTML = `
+            <input type="checkbox" ${marcado ? 'checked' : ''}
+                   style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;cursor:pointer"/>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nome}</div>
+              <div style="font-size:.73rem;color:var(--muted)">#${a.id} · ${a.email}</div>
+            </div>`;
+          row.addEventListener('click', () => toggleAlunoAdd(a, row));
+          lista.appendChild(row);
+        });
+      })
+      .catch(() => {
+        carregando.style.display = 'none';
+        semRes.style.display = 'block';
+        semRes.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> Erro ao buscar.';
+      });
+  }, 280);
+}
+
+function toggleAlunoAdd(aluno, row) {
+  const sid = String(aluno.id);
+  const cb  = row.querySelector('input[type="checkbox"]');
+  if (alunosParaAdicionar.has(sid)) {
+    alunosParaAdicionar.delete(sid);
+    cb.checked = false;
+    row.style.background = '';
+  } else {
+    alunosParaAdicionar.set(sid, aluno);
+    cb.checked = true;
+    row.style.background = 'var(--accent-light)';
+  }
+  atualizarPainelAdd();
+}
+
+function removerChip(sid) {
+  alunosParaAdicionar.delete(sid);
+  document.querySelectorAll('#listaResultados > div').forEach(row => {
+    if (String(row.dataset.id) === sid) {
+      row.querySelector('input[type="checkbox"]').checked = false;
+      row.style.background = '';
+    }
+  });
+  atualizarPainelAdd();
+}
+
+function atualizarPainelAdd() {
+  const painel = document.getElementById('selecionadosParaAdicionar');
+  const chips  = document.getElementById('chipsSelecionados');
+  const btn    = document.getElementById('btnConfirmarAdd');
+  const texto  = document.getElementById('btnAddTexto');
+
+  if (alunosParaAdicionar.size === 0) {
+    painel.style.display = 'none';
+    btn.style.display    = 'none';
+    return;
+  }
+  painel.style.display = 'block';
+  btn.style.display    = 'flex';
+  texto.textContent    = `Adicionar ${alunosParaAdicionar.size} aluno(s) à turma`;
+
+  chips.innerHTML = '';
+  alunosParaAdicionar.forEach((a, sid) => {
+    const chip = document.createElement('div');
+    chip.style.cssText = `display:inline-flex;align-items:center;gap:4px;
+      background:var(--accent-light);color:var(--accent);border-radius:20px;
+      padding:3px 10px;font-size:.78rem;font-weight:600;border:1px solid rgba(91,76,255,.2)`;
+    chip.innerHTML = `<span>${a.nome}</span>
+      <button type="button" onclick="removerChip('${sid}')"
+              style="background:none;border:none;color:var(--accent);cursor:pointer;
+                     font-size:1rem;line-height:1;padding:0;margin-left:2px">×</button>`;
+    chips.appendChild(chip);
+  });
+}
+
+function confirmarAdicao() {
+  if (alunosParaAdicionar.size === 0) return;
+  const hidden = document.getElementById('hiddenAlunosAdd');
+  hidden.innerHTML = '';
+  alunosParaAdicionar.forEach((_, sid) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = 'alunoIds'; inp.value = sid;
+    hidden.appendChild(inp);
+  });
+  document.getElementById('formAdicionarMultiplos').submit();
+}
+
+// Fechar resultados ao clicar fora do campo de busca
+document.addEventListener('click', e => {
+  const campo     = document.getElementById('buscaAluno');
+  const resultado = document.getElementById('resultadoBusca');
+  if (!campo.contains(e.target) && !resultado.contains(e.target))
+    resultado.style.display = 'none';
+});
+document.getElementById('buscaAluno').addEventListener('focus', () => {
+  if (document.getElementById('listaResultados').innerHTML.trim())
+    document.getElementById('resultadoBusca').style.display = 'block';
+});
+</script>
+</th:block>
+</body>
+</html>

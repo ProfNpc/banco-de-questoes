@@ -14,6 +14,7 @@
             th:text="${questao.dificuldade.descricao}"></span>
       <span th:if="${questao.disciplina != null}" class="badge badge-neutral" th:text="${questao.disciplina}"></span>
       <span th:if="${questao.assunto != null}" class="badge badge-neutral" th:text="${questao.assunto}"></span>
+      <span class="badge badge-version" style="background:var(--ink-3);color:#aaaacc" th:text="'#' + ${questao.id}"></span>
       <span class="badge badge-version" th:text="'versão ' + ${questao.versao}"></span>
     </div>
     <h1 class="detalhe-title" th:text="${questao.titulo}">Título</h1>

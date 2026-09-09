@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="${pageTitle}">Resultado</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body style="background:var(--bg-2)">
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><span class="brand-icon">◈</span><span class="brand-text">QuestionBase</span></a>
+    <div style="flex:1"></div>
+    <a th:if="${isProfessor}" th:href="@{/prova/acompanhar}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Painel</a>
+    <a th:unless="${isProfessor}" th:href="@{/prova/minha-lista}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Minhas Provas</a>
+    <a th:href="@{/prova/logout}" class="btn btn-ghost btn-sm" style="margin-left:8px"><i class="fas fa-sign-out-alt"></i> Sair</a>
+  </div>
+</nav>
+<main style="max-width:820px;margin:0 auto;padding:32px 24px">
+
+  <!-- Card de nota -->
+  <div class="card" style="margin-bottom:24px;text-align:center;padding:32px"
+       th:with="nota=${ap.nota != null ? ap.nota : 0}">
+    <div style="font-size:4rem;margin-bottom:8px"
+         th:text="${nota >= 60} ? '🏆' : '📋'"></div>
+    <h1 style="font-family:var(--font-serif);font-size:2rem;font-weight:400;margin-bottom:8px"
+        th:text="${ap.prova.titulo}">Prova</h1>
+    <div style="font-size:.9rem;color:var(--muted);margin-bottom:20px"
+         th:text="'Aluno: ' + ${ap.aluno.nome}"></div>
+
+    <div style="font-size:3rem;font-weight:900;font-family:var(--font-mono);line-height:1"
+         th:text="${#numbers.formatDecimal(nota,1,1)} + '%'"
+         th:style="${nota >= 60} ? 'color:var(--success)' : 'color:var(--danger)'"></div>
+    <div style="font-size:.85rem;color:var(--muted);margin-top:8px">
+      <span th:text="${respostas.stream().filter(r -> r.correta).count()}">0</span> de
+      <span th:text="${ap.prova.provaQuestoes.size()}">0</span> questões corretas
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:16px;flex-wrap:wrap">
+      <span class="badge badge-neutral"
+            th:text="'Status: ' + ${ap.status.name() == 'ENCERRADA'} ? 'Concluída' : 'Expirada'"></span>
+      <span class="badge badge-neutral" th:if="${ap.inicioReal != null}"
+            th:text="'Início: ' + ${#temporals.format(ap.inicioReal,'dd/MM/yy HH:mm')}"></span>
+      <span class="badge badge-neutral" th:if="${ap.fimReal != null}"
+            th:text="'Fim: ' + ${#temporals.format(ap.fimReal,'dd/MM/yy HH:mm')}"></span>
+    </div>
+  </div>
+
+  <!-- Gabarito questão a questão -->
+  <div th:each="pq, iter : ${ap.prova.provaQuestoes}" class="card" style="margin-bottom:16px">
+    <div class="card-header"
+         th:with="resp=${respostas.stream().filter(r -> r.questao.id == pq.questao.id).findFirst().orElse(null)}"
+         th:style="${resp != null and resp.correta} ? 'background:var(--success-light)' : 'background:var(--danger-light)'">
+      <span class="card-title">
+        Questão <span th:text="${iter.count}"></span>
+        <i th:class="${resp != null and resp.correta} ? 'fas fa-check-circle' : 'fas fa-times-circle'"
+           th:style="${resp != null and resp.correta} ? 'color:var(--success)' : 'color:var(--danger)'"></i>
+      </span>
+      <span class="badge" th:if="${resp == null}" style="background:var(--muted);color:white">Não respondida</span>
+    </div>
+    <div class="card-body">
+      <div class="markdown-body" style="margin-bottom:16px"
+           th:utext="${@markdownService.renderizar(pq.questao.enunciado)}"></div>
+      <div th:if="${pq.questao.tipo.name() == 'OBJETIVA'}"
+           th:with="resp=${respostas.stream().filter(r -> r.questao.id == pq.questao.id).findFirst().orElse(null)}">
+        <div th:each="alt : ${pq.questao.alternativas}"
+             th:with="marcada=${resp != null and resp.alternativa != null and resp.alternativa.id == alt.id}"
+             style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);margin-bottom:6px"
+             th:style="${alt.correta} ? 'background:var(--success-light);border:1.5px solid var(--success)' :
+                       (${marcada and !alt.correta} ? 'background:var(--danger-light);border:1.5px solid var(--danger)' :
+                       'background:var(--bg-2);border:1px solid var(--line)')">
+          <strong th:text="${alt.letra} + ')'"></strong>
+          <span class="markdown-body" style="flex:1" th:utext="${@markdownService.renderizar(alt.texto)}"></span>
+          <i th:if="${alt.correta}" class="fas fa-check" style="color:var(--success)"></i>
+          <i th:if="${marcada and !alt.correta}" class="fas fa-times" style="color:var(--danger)"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

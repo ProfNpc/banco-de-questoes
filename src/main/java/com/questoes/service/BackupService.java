@@ -84,7 +84,7 @@ public class BackupService {
 
             DatabaseMetaData meta = conn.getMetaData();
             // Exportar tabelas na ordem correta para respeitar FK
-            String[] tabelas = {"QUESTAO", "ALTERNATIVA", "PROVA", "PROVA_QUESTAO"};
+            String[] tabelas = {"QUESTAO", "ALTERNATIVA", "PROVA", "PROVA_QUESTAO", "ALUNO", "TURMA", "TURMA_ALUNO", "PROFESSOR", "APLICACAO_PROVA", "RESPOSTA_ALUNO"};
 
             for (String tabela : tabelas) {
                 exportarTabela(conn, meta, tabela, sql);
@@ -264,7 +264,7 @@ public class BackupService {
                 // Limpar dados existentes (na ordem inversa das FKs)
                 try (Statement st = conn.createStatement()) {
                     st.execute("SET REFERENTIAL_INTEGRITY FALSE");
-                    for (String tabela : new String[]{"PROVA_QUESTAO", "ALTERNATIVA", "QUESTAO", "PROVA"}) {
+                    for (String tabela : new String[]{"RESPOSTA_ALUNO", "APLICACAO_PROVA", "TURMA_ALUNO", "PROVA_QUESTAO", "ALTERNATIVA", "QUESTAO", "PROVA", "TURMA", "ALUNO", "PROFESSOR"}) {
                         try {
                             st.execute("DELETE FROM " + tabela);
                             log.info("Tabela {} limpa", tabela);

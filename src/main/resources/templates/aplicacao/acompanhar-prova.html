@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="refresh" content="30"/>
+  <title th:text="${pageTitle}">Acompanhar Prova</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body style="background:var(--bg-2)">
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand"><span class="brand-icon">◈</span><span class="brand-text">QuestionBase</span></a>
+    <div style="flex:1"></div>
+    <span style="color:var(--muted);font-size:.8rem"><i class="fas fa-sync-alt"></i> Auto-atualização a cada 30s</span>
+    <a th:href="@{/prova/acompanhar}" class="btn btn-ghost btn-sm" style="margin-left:16px">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+    <a th:href="@{/prova/logout}" class="btn btn-ghost btn-sm" style="margin-left:8px"><i class="fas fa-sign-out-alt"></i> Sair</a>
+  </div>
+</nav>
+
+<main style="max-width:1100px;margin:0 auto;padding:32px 24px">
+  <div class="page-header">
+    <div class="page-header-left">
+      <div style="display:flex;align-items:center;gap:10px"><h1 th:text="${prova.titulo}">Prova</h1><span class="badge badge-version" th:text="'#' + ${prova.id}"></span></div>
+      <p th:if="${prova.disciplina}" th:text="${prova.disciplina}"></p>
+    </div>
+    <div class="page-actions">
+      <span class="badge badge-neutral" th:text="${prova.provaQuestoes.size()} + ' questão(ões)'"></span>
+    </div>
+  </div>
+
+  <!-- Resumo estatístico -->
+  <div class="stats-grid" style="margin-bottom:24px"
+       th:with="total=${aplicacoes.size()},
+                andamento=${aplicacoes.stream().filter(a -> a.status.name() == 'EM_ANDAMENTO').count()},
+                encerradas=${aplicacoes.stream().filter(a -> a.status.name() == 'ENCERRADAS' or a.status.name() == 'ENCERRADA').count()},
+                aguardando=${aplicacoes.stream().filter(a -> a.status.name() == 'AGENDADA').count()}">
+    <div class="stat-card">
+      <div class="stat-icon stat-icon-q"><i class="fas fa-users"></i></div>
+      <div><div class="stat-value" th:text="${total}">0</div><div class="stat-label">Alunos na prova</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--warning-light);color:var(--warning)"><i class="fas fa-spinner"></i></div>
+      <div><div class="stat-value" th:text="${andamento}">0</div><div class="stat-label">Em andamento</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--success-light);color:var(--success)"><i class="fas fa-check"></i></div>
+      <div>
+        <div class="stat-value"
+             th:text="${aplicacoes.stream().filter(a -> a.status.name() == 'ENCERRADA').count()}">0</div>
+        <div class="stat-label">Concluídas</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--accent-light);color:var(--accent)"><i class="fas fa-clock"></i></div>
+      <div><div class="stat-value" th:text="${aguardando}">0</div><div class="stat-label">Aguardando</div></div>
+    </div>
+  </div>
+
+  <!-- Tabela de acompanhamento -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-list" style="color:var(--accent)"></i> Status por Aluno</span>
+    </div>
+    <div th:if="${aplicacoes.isEmpty()}" style="padding:32px;text-align:center;color:var(--muted)">
+      Nenhum aluno foi cadastrado nesta prova ainda.
+    </div>
+    <table th:unless="${aplicacoes.isEmpty()}" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--bg-2);border-bottom:2px solid var(--line)">
+          <th style="padding:10px 16px;text-align:left;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Aluno</th>
+          <th style="padding:10px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Status</th>
+          <th style="padding:10px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Início Real</th>
+          <th style="padding:10px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Tempo Restante</th>
+          <th style="padding:10px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Nota</th>
+          <th style="padding:10px 16px;text-align:right;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Detalhe</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="ap : ${aplicacoes}" style="border-bottom:1px solid var(--line)">
+          <td style="padding:12px 16px">
+            <div style="font-weight:500" th:text="${ap.aluno.nome}"></div>
+            <div style="font-size:.75rem;color:var(--muted)" th:text="${ap.aluno.email}"></div>
+          </td>
+          <td style="padding:12px 16px;text-align:center">
+            <span class="badge"
+                  th:text="${ap.status.name() == 'AGENDADA'} ? 'Aguardando' :
+                           (${ap.status.name() == 'EM_ANDAMENTO'} ? 'Em andamento' :
+                           (${ap.status.name() == 'ENCERRADA'} ? 'Concluída' : 'Expirada'))"
+                  th:style="${ap.status.name() == 'EM_ANDAMENTO'} ? 'background:var(--warning-light);color:#92400e' :
+                            (${ap.status.name() == 'ENCERRADA'} ? 'background:var(--success-light);color:#166534' :
+                            (${ap.status.name() == 'EXPIRADA'} ? 'background:var(--danger-light);color:#991b1b' :
+                            'background:var(--bg-2);color:var(--slate)'))"></span>
+          </td>
+          <td style="padding:12px 16px;text-align:center;font-size:.875rem"
+              th:text="${ap.inicioReal != null ? #temporals.format(ap.inicioReal,'HH:mm') : '--'}"></td>
+          <td style="padding:12px 16px;text-align:center;font-family:var(--font-mono);font-size:.875rem"
+              th:text="${ap.status.name() == 'EM_ANDAMENTO' and ap.calcularFimPermitido() != null}
+                       ? #temporals.format(ap.calcularFimPermitido(),'HH:mm') : '--'"></td>
+          <td style="padding:12px 16px;text-align:center">
+            <span th:if="${ap.nota != null}"
+                  th:text="${#numbers.formatDecimal(ap.nota,1,1)} + '%'"
+                  th:style="${ap.nota >= 60} ? 'color:var(--success);font-weight:700' : 'color:var(--danger);font-weight:700'"></span>
+            <span th:unless="${ap.nota != null}" style="color:var(--muted)">—</span>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <a th:if="${ap.status.name() == 'ENCERRADA' or ap.status.name() == 'EXPIRADA'}"
+               th:href="@{/prova/resultado/{id}(id=${ap.id})}"
+               class="btn btn-sm btn-ghost">
+              <i class="fas fa-chart-bar"></i> Resultado
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+</body>
+</html>

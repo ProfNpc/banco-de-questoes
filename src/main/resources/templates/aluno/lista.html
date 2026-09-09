@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Alunos</h1>
+      <p th:text="${alunos.totalElements} + ' aluno(s) encontrado(s)'"></p>
+    </div>
+    <div class="page-actions">
+      <a th:href="@{/alunos/importar}" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importar em lote</a>
+      <a th:href="@{/alunos/novo}" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Aluno</a>
+    </div>
+  </div>
+
+  <form method="get" th:action="@{/alunos}" class="filters-bar">
+    <div class="filter-group grow">
+      <label>Buscar por nome ou e-mail</label>
+      <input type="text" name="busca" th:value="${busca}" placeholder="Digite para filtrar..."/>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filtrar</button>
+      <a th:href="@{/alunos}" class="btn btn-ghost"><i class="fas fa-times"></i></a>
+    </div>
+  </form>
+
+  <div th:if="${alunos.isEmpty()}" class="empty-state">
+    <div class="empty-state-icon"><i class="fas fa-user-graduate"></i></div>
+    <h3>Nenhum aluno encontrado</h3>
+    <a th:href="@{/alunos/novo}" class="btn btn-primary" style="margin-top:16px">Cadastrar primeiro aluno</a>
+  </div>
+
+  <div class="card" th:unless="${alunos.isEmpty()}">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--bg-2);border-bottom:2px solid var(--line)">
+          <th style="padding:12px 16px;text-align:left;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;width:56px">ID</th>
+          <th style="padding:12px 16px;text-align:left;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Nome</th>
+          <th style="padding:12px 16px;text-align:left;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">E-mail</th>
+          <th style="padding:12px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Turmas</th>
+          <th style="padding:12px 16px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Status</th>
+          <th style="padding:12px 16px;text-align:right;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="a : ${alunos.content}" style="border-bottom:1px solid var(--line)">
+          <td style="padding:12px 16px"><span class="text-mono" style="font-size:.8rem;color:var(--muted)" th:text="${a.id}"></span></td>
+          <td style="padding:12px 16px;font-weight:500" th:text="${a.nome}"></td>
+          <td style="padding:12px 16px;color:var(--slate);font-size:.875rem" th:text="${a.email}"></td>
+          <td style="padding:12px 16px;text-align:center">
+            <span class="badge badge-neutral" th:text="${a.turmas.size()} + ' turma(s)'"></span>
+          </td>
+          <td style="padding:12px 16px;text-align:center">
+            <span th:if="${a.deveTrocarSenha}" class="badge" style="background:var(--warning-light);color:#92400e">Senha provisória</span>
+            <span th:unless="${a.deveTrocarSenha}" class="badge" style="background:var(--success-light);color:#166534">Ativo</span>
+          </td>
+          <td style="padding:12px 16px;text-align:right">
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a th:href="@{/alunos/{id}/editar(id=${a.id})}" class="btn btn-sm btn-ghost" title="Editar"><i class="fas fa-pen"></i></a>
+              <form th:action="@{/alunos/{id}/excluir(id=${a.id})}" method="post"
+                    onsubmit="return confirm('Excluir este aluno?')">
+                <button type="submit" class="btn btn-sm btn-danger" title="Excluir"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div th:if="${alunos.totalPages > 1}" class="pagination">
+    <div class="page-item" th:classappend="${alunos.first} ? 'disabled'">
+      <a th:href="@{/alunos(page=${alunos.number-1},busca=${busca})}">&laquo;</a>
+    </div>
+    <div th:each="i : ${#numbers.sequence(0,alunos.totalPages-1)}"
+         class="page-item" th:classappend="${i==alunos.number} ? 'active'">
+      <a th:if="${i!=alunos.number}" th:href="@{/alunos(page=${i},busca=${busca})}" th:text="${i+1}"></a>
+      <span th:if="${i==alunos.number}" th:text="${i+1}"></span>
+    </div>
+    <div class="page-item" th:classappend="${alunos.last} ? 'disabled'">
+      <a th:href="@{/alunos(page=${alunos.number+1},busca=${busca})}">&raquo;</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
